@@ -1,0 +1,12 @@
+Output export summary
+
+health_ok=True
+service=person3-ai-api
+
+diagnose_test1_severity=Emergency
+diagnose_test2_severity=Medium
+diagnose_test3_severity=Emergency
+diagnose_test4_severity=Low
+
+exa_first_url=https://applications.emro.who.int/imemrf/Pak_J_Med_Sci/Pak_J_Med_Sci_2009_25_3_490.pdf
+fal_result=403 Forbidden
