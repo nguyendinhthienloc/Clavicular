@@ -1,0 +1,27 @@
+﻿{
+    "success":  true,
+    "data":  {
+                 "conditions":  [
+                                    {
+                                        "name":  "Tension Headache",
+                                        "likelihood":  "High",
+                                        "explanation":  "Common type of headache due to stress or tension."
+                                    },
+                                    {
+                                        "name":  "Migraine",
+                                        "likelihood":  "Medium",
+                                        "explanation":  "May occur with dull pain, typically throbbing in nature."
+                                    }
+                                ],
+                 "severity":  "Low",
+                 "action":  "Consider taking over-the-counter pain relief and rest in a dark room.",
+                 "home_tips":  [
+                                   "Stay hydrated",
+                                   "Manage stress through relaxation techniques"
+                               ],
+                 "warning_signs":  [
+                                       "Severe pain that worsens, vision changes, or neurological symptoms"
+                                   ],
+                 "disclaimer":  "This is AI information only, not medical advice. For emergencies call 115."
+             }
+}

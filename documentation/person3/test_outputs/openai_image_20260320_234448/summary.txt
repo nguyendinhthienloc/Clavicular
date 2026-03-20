@@ -1,0 +1,1 @@
+﻿IMAGE_SAVED=0: non-200 response

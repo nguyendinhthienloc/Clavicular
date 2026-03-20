@@ -1,0 +1,27 @@
+﻿{
+    "success":  true,
+    "data":  {
+                 "conditions":  [
+                                    {
+                                        "name":  "Myocardial Infarction",
+                                        "likelihood":  "High",
+                                        "explanation":  "Chest pain with arm pain may indicate heart attack."
+                                    },
+                                    {
+                                        "name":  "Angina",
+                                        "likelihood":  "Medium",
+                                        "explanation":  "Pressure in the chest can also be angina."
+                                    }
+                                ],
+                 "severity":  "Emergency",
+                 "action":  "Call emergency services immediately or have someone take you to the hospital.",
+                 "home_tips":  [
+                                   "Stay calm and breathe slowly.",
+                                   "Do not attempt to drive yourself."
+                               ],
+                 "warning_signs":  [
+                                       "Chest pain lasting over 20 minutes with radiation to the arm."
+                                   ],
+                 "disclaimer":  "This is AI information only, not medical advice. For emergencies call 115."
+             }
+}

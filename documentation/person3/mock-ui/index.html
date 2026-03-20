@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Person 3 Mock UI</title>
+  <style>
+    :root {
+      --bg-1: #fefaf3;
+      --bg-2: #f6efe3;
+      --ink: #1f2a37;
+      --muted: #576173;
+      --brand: #0f766e;
+      --brand-2: #14b8a6;
+      --warning: #b45309;
+      --card: rgba(255, 255, 255, 0.9);
+      --ring: rgba(15, 118, 110, 0.2);
+      --border: #e8dcc8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 15%, #ffe8d5 0, transparent 38%),
+        radial-gradient(circle at 85% 10%, #d5f6ef 0, transparent 35%),
+        linear-gradient(140deg, var(--bg-1), var(--bg-2));
+      min-height: 100vh;
+      padding: 18px;
+    }
+
+    .app {
+      max-width: 980px;
+      margin: 0 auto;
+      animation: rise 0.5s ease-out;
+    }
+
+    .hero {
+      background: linear-gradient(120deg, #0f766e, #0b5f58);
+      color: #f5fffd;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 12px 28px rgba(13, 44, 41, 0.24);
+      margin-bottom: 14px;
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 1.5rem;
+      letter-spacing: 0.2px;
+    }
+
+    .hero p {
+      margin: 0;
+      color: #d9fcf8;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 8px 20px rgba(20, 40, 60, 0.08);
+      backdrop-filter: blur(4px);
+    }
+
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 1.08rem;
+    }
+
+    .row {
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: inline-block;
+      margin-bottom: 6px;
+      font-weight: 700;
+      color: #233447;
+    }
+
+    textarea,
+    input,
+    select {
+      width: 100%;
+      border: 1px solid #d7ccb9;
+      background: #fffdfa;
+      color: var(--ink);
+      border-radius: 10px;
+      padding: 10px 12px;
+      outline: none;
+      font-size: 14px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    textarea:focus,
+    input:focus,
+    select:focus {
+      border-color: var(--brand-2);
+      box-shadow: 0 0 0 4px var(--ring);
+    }
+
+    .button-row,
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.08s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary {
+      background: linear-gradient(120deg, var(--brand), #0d5f58);
+      color: #f1fffd;
+      box-shadow: 0 5px 12px rgba(15, 118, 110, 0.24);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(120deg, #1d4ed8, #1e40af);
+      color: #eff6ff;
+      box-shadow: 0 5px 12px rgba(37, 99, 235, 0.22);
+    }
+
+    .btn-muted {
+      background: #ece7dd;
+      color: #334155;
+    }
+
+    .chip {
+      background: #fff9ed;
+      border: 1px solid #f1dcc0;
+      color: #744210;
+      font-weight: 600;
+      font-size: 13px;
+      padding: 8px 11px;
+      border-radius: 999px;
+    }
+
+    pre {
+      margin: 0;
+      background: #16202f;
+      color: #d7f0ff;
+      border-radius: 12px;
+      padding: 14px;
+      overflow: auto;
+      line-height: 1.45;
+      min-height: 170px;
+    }
+
+    .tip {
+      margin-top: 8px;
+      color: var(--warning);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    @media (max-width: 700px) {
+      body { padding: 10px; }
+      .hero { padding: 16px; }
+      .card { padding: 12px; }
+      .hero h1 { font-size: 1.3rem; }
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="hero">
+      <h1>Person 3 AI Server Demo</h1>
+      <p>Backend base URL: <strong id="baseLabel">http://localhost:8016</strong></p>
+    </section>
+
+    <section class="card">
+      <h2>Server Connection</h2>
+      <div class="row">
+        <label for="baseUrl">Base URL</label>
+        <input id="baseUrl" value="http://localhost:8016" />
+      </div>
+      <div class="button-row">
+        <button id="healthBtn" class="btn-primary">Check /health</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Diagnosis Test</h2>
+      <div class="row">
+        <label for="lang">Language</label>
+        <select id="lang">
+          <option value="en">en</option>
+          <option value="vi">vi</option>
+        </select>
+      </div>
+
+      <div class="chips" aria-label="sample prompts">
+        <button class="chip" type="button" data-sample="chest">Sample: Emergency chest pain</button>
+        <button class="chip" type="button" data-sample="headache">Sample: Mild headache</button>
+        <button class="chip" type="button" data-sample="throat">Sample: Sore throat (VI)</button>
+      </div>
+
+      <div class="row">
+        <label for="message">Diagnose Prompt</label>
+        <textarea id="message">Body region: Chest
+Pain type: pressure
+Duration: 30 minutes
+Severity: 9
+Other: left arm pain</textarea>
+      </div>
+
+      <div class="button-row">
+        <button id="diagnoseBtn" class="btn-primary">POST /api/diagnose</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Sources Test</h2>
+      <div class="row">
+        <label for="query">Medical query</label>
+        <input id="query" value="chest pain warning signs" />
+      </div>
+      <div class="button-row">
+        <button id="sourcesBtn" class="btn-secondary">POST /api/sources</button>
+      </div>
+      <p class="tip">Tip: use short symptom topics for faster, cleaner source results.</p>
+    </section>
+
+    <section class="card">
+      <h2>Response</h2>
+      <pre id="output">Ready.</pre>
+    </section>
+  </div>
+
+  <script>
+    const output = document.getElementById('output');
+    const baseUrlInput = document.getElementById('baseUrl');
+    const baseLabel = document.getElementById('baseLabel');
+    const samplePrompts = {
+      chest: {
+        language: 'en',
+        text: 'Body region: Chest\nPain type: pressure\nDuration: 30 minutes\nSeverity: 9\nOther: left arm pain'
+      },
+      headache: {
+        language: 'en',
+        text: 'Body region: Head\nPain type: dull ache\nDuration: 2 hours\nSeverity: 3\nOther: no vomiting, can still work'
+      },
+      throat: {
+        language: 'vi',
+        text: 'Vung dau: Co hong\nKieu dau: rat khi nuot\nThoi gian: 2 ngay\nMuc do: 4\nKhac: sot nhe 37.8C'
+      }
+    };
+
+    function base() {
+      const url = baseUrlInput.value.trim().replace(/\/$/, '');
+      baseLabel.textContent = url;
+      return url;
+    }
+
+    async function callApi(path, body) {
+      const res = await fetch(base() + path, {
+        method: body ? 'POST' : 'GET',
+        headers: body ? { 'Content-Type': 'application/json' } : {},
+        body: body ? JSON.stringify(body) : undefined
+      });
+
+      const text = await res.text();
+      let parsed = text;
+      try { parsed = JSON.parse(text); } catch (_) {}
+
+      output.textContent = JSON.stringify({
+        status: res.status,
+        ok: res.ok,
+        data: parsed
+      }, null, 2);
+    }
+
+    document.getElementById('healthBtn').onclick = () => callApi('/health');
+
+    document.getElementById('diagnoseBtn').onclick = () => {
+      const language = document.getElementById('lang').value;
+      const user_message = document.getElementById('message').value;
+      callApi('/api/diagnose', { user_message, language });
+    };
+
+    document.getElementById('sourcesBtn').onclick = () => {
+      const query = document.getElementById('query').value.trim();
+      if (!query) {
+        output.textContent = JSON.stringify({
+          status: 'validation_error',
+          message: 'Please enter a medical query before calling /api/sources.'
+        }, null, 2);
+        return;
+      }
+      callApi('/api/sources', { query });
+    };
+
+    document.querySelectorAll('[data-sample]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const sample = samplePrompts[btn.getAttribute('data-sample')];
+        if (!sample) return;
+        document.getElementById('lang').value = sample.language;
+        document.getElementById('message').value = sample.text;
+      });
+    });
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+﻿{
+    "success":  true,
+    "data":  {
+                 "conditions":  [
+                                    {
+                                        "name":  "ViÃªm há»ng",
+                                        "likelihood":  "High",
+                                        "explanation":  "Äau há»ng, kÃ©o dÃ i 2 ngÃ y."
+                                    }
+                                ],
+                 "severity":  "Low",
+                 "action":  "Nghá» ngÆ¡i, uá»ng nhiá»u nÆ°á»c, sá»­ dá»¥ng thuá»c giáº£m Äau theo chá» Äá»nh.",
+                 "home_tips":  [
+                                   "Uá»ng trÃ  gá»«ng",
+                                   "Há»ng Äau cÃ³ thá» sÃºc miá»ng nÆ°á»c muá»i."
+                               ],
+                 "warning_signs":  [
+                                       "KhÃ³ breathing",
+                                       "Fever over 39Â°C"
+                                   ],
+                 "disclaimer":  "ÄÃ¢y chá» lÃ  thÃ´ng tin AI, khÃ´ng pháº£i lá»i khuyÃªn y táº¿. Cáº¥p cá»©u gá»i 115."
+             }
+}

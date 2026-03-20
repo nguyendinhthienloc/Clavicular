@@ -1,0 +1,72 @@
+Person 3 AI Server - Terminal Commands
+========================================
+
+Run these commands in separate PowerShell terminals from the workspace root:
+D:\Hackathon_Clavicular
+
+TERMINAL A - Backend API (port 8016) - VERBOSE DEBUG LOGGING:
+Write-Host "[$(Get-Date)] Starting Backend API Server..." -ForegroundColor Cyan
+Write-Host "[$(Get-Date)] Listening on 0.0.0.0:8016" -ForegroundColor Yellow
+Write-Host "[$(Get-Date)] Watch logs below for every request/response" -ForegroundColor Yellow
+d:/Hackathon_Clavicular/.venv/Scripts/python.exe -m uvicorn ai_dev.src.server:app --host 0.0.0.0 --port 8016 --reload --log-level debug --access-log
+
+TERMINAL B - Mock UI (port 8091) - VERBOSE LOGGING:
+Write-Host "[$(Get-Date)] Starting Mock UI Static Server..." -ForegroundColor Cyan
+Write-Host "[$(Get-Date)] Listening on 0.0.0.0:8091" -ForegroundColor Yellow
+Set-Location documentation/person3/mock-ui; d:/Hackathon_Clavicular/.venv/Scripts/python.exe -m http.server 8091 --bind 0.0.0.0
+
+TERMINAL C - Public Tunnel (Cloudflared) - VERBOSE:
+Write-Host "[$(Get-Date)] Starting Cloudflared Tunnel..." -ForegroundColor Cyan
+Write-Host "[$(Get-Date)] Proxying: http://127.0.0.1:8016" -ForegroundColor Yellow
+Write-Host "[$(Get-Date)] Watch for public URL below" -ForegroundColor Yellow
+cloudflared tunnel --url http://127.0.0.1:8016 --loglevel debug
+
+========================================
+URLS FOR SHARING:
+========================================
+
+Local (your computer):
+- Backend: http://127.0.0.1:8016
+- UI: http://127.0.0.1:8091/index.html
+- Health: http://127.0.0.1:8016/health
+
+Local Network (friends on same Wi-Fi):
+- Backend: http://192.168.51.28:8016
+- UI: http://192.168.51.28:8091/index.html
+- Health: http://192.168.51.28:8016/health
+
+Public / Remote (Cloudflared - shared below):
+- Check Terminal C output for: https://<random>.trycloudflare.com
+- Share this URL with remote testers
+
+========================================
+TROUBLESHOOTING / PORT CLEANUP:
+========================================
+
+If ports are stuck/in use, run this BEFORE starting servers:
+
+```powershell
+# Kill all processes on target ports
+Get-NetTCPConnection -LocalPort 8016 -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Get-NetTCPConnection -LocalPort 8091 -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Get-NetTCPConnection -LocalPort 8015 -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+
+# Or force-kill by PID if above doesn't work:
+taskkill /PID <PID> /F
+
+# Verify ports are clean:
+netstat -ano | Select-String ':80(0|15|16|91)'
+```
+
+========================================
+NOTES:
+- Keep all three terminals open and running while testing
+- Terminal A: Shows EVERY API request (method, path, query, body, response status, timing)
+- Terminal B: Shows EVERY UI file access (GET requests, status codes)
+- Terminal C: Shows tunnel connection status, errors, and public URL
+- All three include timestamps [HH:MM:SS] for easy correlation
+- Check status codes and response times in logs for performance issues
+- If any terminal crashes or shows errors, it will display full stack trace
+- Cloudflared URL is temporary (expires when tunnel closes)
+- TIME_WAIT connections are normal and auto-clear after 60s
