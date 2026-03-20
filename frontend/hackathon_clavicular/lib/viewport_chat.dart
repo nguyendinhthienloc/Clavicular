@@ -358,55 +358,51 @@ class _ViewportChatState extends State<ViewportChat> {
                     children: [
                       Container(
                         width: double.infinity,
-                        height: 140,
+                        height: 110,
                         decoration: BoxDecoration(
                           color: composerBackground,
                           borderRadius: BorderRadius.circular(26),
                           border: Border.all(color: composerBorder),
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(18, 14, 12, 10),
-                          child: Column(
+                          padding: const EdgeInsets.fromLTRB(18, 20, 12, 20),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              TextField(
-                                controller: _controller,
-                                maxLines: 1,
-                                textInputAction: TextInputAction.send,
-                                style: GoogleFonts.montserrat(
-                                  color: inputTextColor,
-                                  fontSize: 16,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: 'How can I help you today?',
-                                  hintStyle: GoogleFonts.montserrat(
-                                    color: inputHintColor,
-                                    fontSize: 18,
-                                  ),
-                                  border: InputBorder.none,
-                                ),
-                                onSubmitted: (_) => _sendMessage(),
+                              Icon(
+                                Icons.add,
+                                color: controlIconColor,
+                                size: 30,
                               ),
-                              const Spacer(),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.add,
-                                    color: controlIconColor,
-                                    size: 30,
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: TextField(
+                                  controller: _controller,
+                                  maxLines: 1,
+                                  textInputAction: TextInputAction.send,
+                                  style: GoogleFonts.montserrat(
+                                    color: inputTextColor,
+                                    fontSize: 16,
                                   ),
-                                  const Spacer(),
-                                  GestureDetector(
-                                    behavior: HitTestBehavior.opaque,
-                                    onTap: _sendMessage,
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: Icon(
-                                        Icons.graphic_eq,
-                                        color: controlIconColor,
-                                      ),
+                                  decoration: InputDecoration(
+                                    hintText: 'How can I help you today?',
+                                    hintStyle: GoogleFonts.montserrat(
+                                      color: inputHintColor,
+                                      fontSize: 18,
                                     ),
+                                    border: InputBorder.none,
                                   ),
-                                ],
+                                  onSubmitted: (_) => _sendMessage(),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              IconButton(
+                                onPressed: _sendMessage,
+                                icon: Icon(
+                                  Icons.send_rounded,
+                                  color: controlIconColor,
+                                  size: 28,
+                                ),
                               ),
                             ],
                           ),

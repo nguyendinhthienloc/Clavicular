@@ -67,10 +67,22 @@
       let ambientLight = null;
       let dirLight = null;
       let THREERef = null;
+      let isStatusHovered = false;
+      let selectionSummaryText = 'Nothing selected';
+      let selectionFullText = 'Nothing selected';
+      let isSelectionStatusActive = false;
 
       function setStatus(message) {
         console.log(message);
+        isSelectionStatusActive = false;
         statusEl.textContent = message;
+      }
+
+      function setSelectionStatus(summaryText, fullText) {
+        selectionSummaryText = summaryText;
+        selectionFullText = fullText;
+        isSelectionStatusActive = true;
+        statusEl.textContent = isStatusHovered ? fullText : summaryText;
       }
 
       window.addEventListener('error', (event) => {
@@ -145,6 +157,20 @@
         }
       });
 
+      statusEl.addEventListener('mouseenter', () => {
+        isStatusHovered = true;
+        if (isSelectionStatusActive) {
+          statusEl.textContent = selectionFullText;
+        }
+      });
+
+      statusEl.addEventListener('mouseleave', () => {
+        isStatusHovered = false;
+        if (isSelectionStatusActive) {
+          statusEl.textContent = selectionSummaryText;
+        }
+      });
+
       (async function main() {
         try {
           setStatus('Importing three.js modules...');
@@ -193,46 +219,76 @@
           let isHoverSelectHeld = false;
           let lastHoverMesh = null;
 
-          function sendSelectedPart(name, count = 1) {
-            let baseLabel = name || '(unnamed part)';
-            if (count <= 0) {
-              baseLabel = 'Nothing selected';
+          function meshLabel(mesh) {
+            if (!mesh) {
+              return null;
             }
-            const safeCount = Math.max(count, 0);
-            const message =
-              safeCount > 1
-                ? `${baseLabel} (+${safeCount - 1} more)`
+            return (
+              mesh.name ||
+              (mesh.parent && mesh.parent.name) ||
+              '(unnamed part)'
+            );
+          }
+
+          function getSelectionNames() {
+            if (selectedMeshes.size === 0) {
+              return [];
+            }
+            const names = [];
+            selectedMeshes.forEach((mesh) => {
+              names.push(meshLabel(mesh));
+            });
+            return names;
+          }
+
+          function notifySelection(latestMesh) {
+            const names = getSelectionNames();
+            if (names.length === 0) {
+              setSelectionStatus('Nothing selected', 'Nothing selected');
+              if (window.parent && window.parent !== window) {
+                window.parent.postMessage(
+                  JSON.stringify({
+                    type: 'part-selected',
+                    name: 'Nothing selected',
+                    count: 0,
+                  }),
+                  '*'
+                );
+              }
+              return;
+            }
+
+            const fullText = names.join('\n');
+            let summaryText = fullText;
+            if (names.length > 3) {
+              const visible = names.slice(0, 3).join('\n');
+              summaryText = `${visible}\n...and ${names.length - 3} more`;
+            }
+            setSelectionStatus(summaryText, fullText);
+
+            let sourceMesh = latestMesh;
+            if (!sourceMesh || !selectedMeshes.has(sourceMesh)) {
+              const iter = selectedMeshes.values().next();
+              sourceMesh = iter.value;
+            }
+
+            const baseLabel = meshLabel(sourceMesh) ?? '(unnamed part)';
+            const count = names.length;
+            const finalMessage =
+              count > 1
+                ? `${baseLabel} (+${count - 1} more)`
                 : baseLabel;
-            setStatus(message);
+
             if (window.parent && window.parent !== window) {
               window.parent.postMessage(
                 JSON.stringify({
                   type: 'part-selected',
-                  name: message,
-                  count: safeCount,
+                  name: finalMessage,
+                  count,
                 }),
                 '*'
               );
             }
-          }
-
-          function reportSelection(latestMesh) {
-            const selectedCount = selectedMeshes.size;
-            if (selectedCount === 0) {
-              sendSelectedPart('Nothing selected', 0);
-              return;
-            }
-            let sourceMesh = latestMesh;
-            if (!sourceMesh) {
-              const iter = selectedMeshes.values().next();
-              sourceMesh = iter.value;
-            }
-            const label =
-              (sourceMesh &&
-                (sourceMesh.name ||
-                  (sourceMesh.parent && sourceMesh.parent.name))) ||
-              '(unnamed part)';
-            sendSelectedPart(label, selectedCount);
           }
 
           function removeHighlight(mesh) {
@@ -329,7 +385,7 @@
             loader.load(
               url,
               function (gltf) {
-                setStatus('Nothing selected');
+                setSelectionStatus('Nothing selected', 'Nothing selected');
 
                 const model = gltf.scene;
                 scene.add(model);
@@ -396,7 +452,7 @@
             lastHoverMesh = hit;
             if (!selectedMeshes.has(hit)) {
               applyHighlight(hit);
-              reportSelection(hit);
+              notifySelection(hit);
             }
           }
 
@@ -409,7 +465,7 @@
             if (hits.length === 0) {
               if (!isShiftMultiSelect && !isHoverSelectHeld) {
                 clearHighlight();
-                sendSelectedPart('Nothing selected', 0);
+                notifySelection(null);
               }
               return;
             }
@@ -427,7 +483,7 @@
               }
             }
 
-            reportSelection(hit);
+            notifySelection(hit);
           }
 
           renderer.domElement.addEventListener('click', onClick);
