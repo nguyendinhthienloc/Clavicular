@@ -4,7 +4,14 @@ import 'package:dio/dio.dart';
 import 'config/app_config.dart';
 
 class ViewportChat extends StatefulWidget {
-  const ViewportChat({super.key});
+  const ViewportChat({
+    super.key,
+    required this.isDarkMode,
+    required this.onThemeChanged,
+  });
+
+  final bool isDarkMode;
+  final ValueChanged<bool> onThemeChanged;
 
   @override
   State<ViewportChat> createState() => _ViewportChatState();
@@ -16,7 +23,6 @@ class _ViewportChatState extends State<ViewportChat> {
   late final Dio _dio;
   bool _isTyping = false;
   bool _hasSentFirstMessage = false;
-  bool _isDarkMode = true;
   bool _isLoading = false;
 
   @override
@@ -160,44 +166,45 @@ class _ViewportChatState extends State<ViewportChat> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDarkMode = widget.isDarkMode;
     final bool hasMessages = _messages.isNotEmpty;
-    final Color viewportBackground = _isDarkMode
+    final Color viewportBackground = isDarkMode
         ? const Color(0xFF1F1F1F)
         : const Color(0xFFF4F6F8);
-    final Color viewportBorder = _isDarkMode
+    final Color viewportBorder = isDarkMode
         ? const Color(0xFF2C2C2C)
         : const Color(0xFFD4D9E0);
-    final Color bubbleUser = _isDarkMode
+    final Color bubbleUser = isDarkMode
         ? const Color(0xFF2E2E2E)
         : const Color(0xFFE8EDF5);
-    final Color bubbleAssistant = _isDarkMode
+    final Color bubbleAssistant = isDarkMode
         ? const Color(0xFF262626)
         : const Color(0xFFFFFFFF);
-    final Color bubbleBorder = _isDarkMode
+    final Color bubbleBorder = isDarkMode
         ? const Color(0xFF3B3B3B)
         : const Color(0xFFD3D8E0);
-    final Color bodyTextColor = _isDarkMode
+    final Color bodyTextColor = isDarkMode
         ? Colors.white
         : const Color(0xFF1F2937);
-    final Color heroTextColor = _isDarkMode
+    final Color heroTextColor = isDarkMode
         ? const Color(0xFFE4E0D8)
         : const Color(0xFF374151);
-    final Color composerBackground = _isDarkMode
+    final Color composerBackground = isDarkMode
         ? const Color(0xFF2A2A2A)
         : const Color(0xFFFFFFFF);
-    final Color composerBorder = _isDarkMode
+    final Color composerBorder = isDarkMode
         ? const Color(0xFF454545)
         : const Color(0xFFD1D5DB);
-    final Color inputTextColor = _isDarkMode
+    final Color inputTextColor = isDarkMode
         ? const Color(0xFFE3E3E3)
         : const Color(0xFF111827);
-    final Color inputHintColor = _isDarkMode
+    final Color inputHintColor = isDarkMode
         ? const Color(0xFF9C9C9C)
         : const Color(0xFF6B7280);
-    final Color controlIconColor = _isDarkMode
+    final Color controlIconColor = isDarkMode
         ? const Color(0xFFBEBEBE)
         : const Color(0xFF4B5563);
-    final Color footerTextColor = _isDarkMode
+    final Color footerTextColor = isDarkMode
         ? const Color(0xFFC8C8C8)
         : const Color(0xFF6B7280);
 
@@ -223,7 +230,7 @@ class _ViewportChatState extends State<ViewportChat> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          _isDarkMode
+                          isDarkMode
                               ? Icons.dark_mode_outlined
                               : Icons.light_mode_outlined,
                           color: controlIconColor,
@@ -231,15 +238,8 @@ class _ViewportChatState extends State<ViewportChat> {
                         ),
                         const SizedBox(width: 6),
                         Switch(
-                          value: _isDarkMode,
-                          onChanged: (bool value) {
-                            if (!mounted) {
-                              return;
-                            }
-                            setState(() {
-                              _isDarkMode = value;
-                            });
-                          },
+                          value: isDarkMode,
+                          onChanged: widget.onThemeChanged,
                         ),
                       ],
                     ),
@@ -318,11 +318,11 @@ class _ViewportChatState extends State<ViewportChat> {
                         child: AnimatedSlide(
                           duration: const Duration(milliseconds: 450),
                           curve: Curves.easeInOut,
-                          offset: Offset(
-                            0.0,
-                            _hasSentFirstMessage
-                                ? -1.2
-                                : _isTyping
+                            offset: Offset(
+                              0.0,
+                              _hasSentFirstMessage
+                                  ? -1.2
+                                  : _isTyping
                                 ? -0.25
                                 : 0.0,
                           ),

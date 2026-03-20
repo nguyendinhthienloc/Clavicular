@@ -4,19 +4,35 @@
     <meta charset="UTF-8" />
     <title>Model Picker</title>
     <style>
-      html, body {
+      html,
+      body {
         margin: 0;
         width: 100%;
         height: 100%;
         overflow: hidden;
-        background: #efefef;
         font-family: sans-serif;
+      }
+
+      body {
+        background: #f4f6f8;
+        transition: background 0.3s ease;
+      }
+
+      body.dark {
+        background: #1f1f1f;
+        color: #f5f5f5;
+      }
+
+      body.light {
+        background: #f4f6f8;
+        color: #111;
       }
 
       #app {
         width: 100%;
         height: 100%;
         position: relative;
+        background: transparent;
       }
 
       #status {
@@ -25,7 +41,7 @@
         left: 12px;
         z-index: 10;
         background: rgba(0, 0, 0, 0.75);
-        color: white;
+        color: #f5f5f5;
         padding: 10px 12px;
         border-radius: 8px;
         max-width: 80%;
@@ -46,6 +62,11 @@
     <script>
       const statusEl = document.getElementById('status');
       const container = document.getElementById('app');
+      let renderer = null;
+      let scene = null;
+      let ambientLight = null;
+      let dirLight = null;
+      let THREERef = null;
 
       function setStatus(message) {
         console.log(message);
@@ -72,6 +93,58 @@
 
       setStatus('Plain script started');
 
+      const params = new URLSearchParams(window.location.search);
+      const modelUrl = params.get('model');
+      const requestedTheme = params.get('theme');
+      let currentTheme = requestedTheme === 'dark' ? 'dark' : 'light';
+
+      function applyTheme(mode) {
+        currentTheme = mode === 'dark' ? 'dark' : 'light';
+        const isDark = currentTheme === 'dark';
+
+        document.body.classList.toggle('dark', isDark);
+        document.body.classList.toggle('light', !isDark);
+        container.style.background = isDark ? '#1f1f1f' : '#f4f6f8';
+        statusEl.style.background = isDark
+          ? 'rgba(21, 21, 21, 0.8)'
+          : 'rgba(255, 255, 255, 0.95)';
+        statusEl.style.color = isDark ? '#f5f5f5' : '#1f2937';
+
+        if (scene && THREERef) {
+          scene.background = new THREERef.Color(isDark ? 0x1f1f1f : 0xf4f6f8);
+        }
+        if (renderer) {
+          renderer.setClearColor(isDark ? 0x1f1f1f : 0xf4f6f8);
+        }
+        if (ambientLight) {
+          ambientLight.intensity = isDark ? 0.9 : 1.2;
+        }
+        if (dirLight) {
+          dirLight.intensity = isDark ? 1.1 : 1.5;
+        }
+      }
+
+      applyTheme(currentTheme);
+
+      window.addEventListener('message', (event) => {
+        let data = event.data;
+        if (!data) {
+          return;
+        }
+
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data);
+          } catch (e) {
+            return;
+          }
+        }
+
+        if (data.type === 'theme-changed') {
+          applyTheme(data.mode === 'dark' ? 'dark' : 'light');
+        }
+      });
+
       (async function main() {
         try {
           setStatus('Importing three.js modules...');
@@ -80,14 +153,11 @@
           const { OrbitControls } = await import('./vendor/controls/OrbitControls.js');
           const { GLTFLoader } = await import('./vendor/loaders/GLTFLoader.js');
           const { DRACOLoader } = await import('./vendor/loaders/DRACOLoader.js');
+          THREERef = THREE;
 
           setStatus('Modules imported successfully');
 
-          const params = new URLSearchParams(window.location.search);
-          const modelUrl = params.get('model');
-
-          const scene = new THREE.Scene();
-          scene.background = new THREE.Color(0xefefef);
+          scene = new THREE.Scene();
 
           const camera = new THREE.PerspectiveCamera(
             45,
@@ -97,7 +167,7 @@
           );
           camera.position.set(0, 1.5, 4);
 
-          const renderer = new THREE.WebGLRenderer({ antialias: true });
+          renderer = new THREE.WebGLRenderer({ antialias: true });
           renderer.setSize(container.clientWidth, container.clientHeight);
           renderer.setPixelRatio(window.devicePixelRatio);
           container.appendChild(renderer.domElement);
@@ -105,11 +175,14 @@
           const controls = new OrbitControls(camera, renderer.domElement);
           controls.enableDamping = true;
 
-          scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+          ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+          scene.add(ambientLight);
 
-          const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+          dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
           dirLight.position.set(3, 5, 2);
           scene.add(dirLight);
+
+          applyTheme(currentTheme);
 
           const raycaster = new THREE.Raycaster();
           const mouse = new THREE.Vector2();
@@ -118,7 +191,14 @@
           let pickableMeshes = [];
 
           function sendSelectedPart(name) {
-            setStatus(name || '(unnamed part)');
+            const label = name || '(unnamed part)';
+            setStatus(label);
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage(
+                JSON.stringify({ type: 'part-selected', name: label }),
+                '*'
+              );
+            }
           }
 
           function clearHighlight() {
