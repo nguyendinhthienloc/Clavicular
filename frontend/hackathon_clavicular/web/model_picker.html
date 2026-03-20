@@ -187,54 +187,121 @@
           const raycaster = new THREE.Raycaster();
           const mouse = new THREE.Vector2();
 
-          let selectedMesh = null;
           let pickableMeshes = [];
+          const selectedMeshes = new Set();
+          let isShiftMultiSelect = false;
+          let isHoverSelectHeld = false;
+          let lastHoverMesh = null;
 
-          function sendSelectedPart(name) {
-            const label = name || '(unnamed part)';
-            setStatus(label);
+          function sendSelectedPart(name, count = 1) {
+            let baseLabel = name || '(unnamed part)';
+            if (count <= 0) {
+              baseLabel = 'Nothing selected';
+            }
+            const safeCount = Math.max(count, 0);
+            const message =
+              safeCount > 1
+                ? `${baseLabel} (+${safeCount - 1} more)`
+                : baseLabel;
+            setStatus(message);
             if (window.parent && window.parent !== window) {
               window.parent.postMessage(
-                JSON.stringify({ type: 'part-selected', name: label }),
+                JSON.stringify({
+                  type: 'part-selected',
+                  name: message,
+                  count: safeCount,
+                }),
                 '*'
               );
             }
           }
 
-          function clearHighlight() {
-            if (!selectedMesh) return;
-
-            if (selectedMesh.userData.originalMaterial) {
-              selectedMesh.material = selectedMesh.userData.originalMaterial;
-              delete selectedMesh.userData.originalMaterial;
+          function reportSelection(latestMesh) {
+            const selectedCount = selectedMeshes.size;
+            if (selectedCount === 0) {
+              sendSelectedPart('Nothing selected', 0);
+              return;
             }
+            let sourceMesh = latestMesh;
+            if (!sourceMesh) {
+              const iter = selectedMeshes.values().next();
+              sourceMesh = iter.value;
+            }
+            const label =
+              (sourceMesh &&
+                (sourceMesh.name ||
+                  (sourceMesh.parent && sourceMesh.parent.name))) ||
+              '(unnamed part)';
+            sendSelectedPart(label, selectedCount);
+          }
 
-            selectedMesh = null;
+          function removeHighlight(mesh) {
+            if (mesh.userData.originalMaterial) {
+              mesh.material = mesh.userData.originalMaterial;
+              delete mesh.userData.originalMaterial;
+            }
+            selectedMeshes.delete(mesh);
+          }
+
+          function clearHighlight() {
+            selectedMeshes.forEach((mesh) => {
+              removeHighlight(mesh);
+            });
+            selectedMeshes.clear();
           }
 
           function applyHighlight(mesh) {
-            clearHighlight();
+            if (!mesh.userData.originalMaterial) {
+              mesh.userData.originalMaterial = mesh.material;
 
-            mesh.userData.originalMaterial = mesh.material;
-
-            if (Array.isArray(mesh.material)) {
-              mesh.material = mesh.material.map((m) => m.clone());
-            } else {
-              mesh.material = mesh.material.clone();
-            }
-
-            if (Array.isArray(mesh.material)) {
-              for (const m of mesh.material) {
-                if (m.emissive) {
-                  m.emissive.setHex(0xffaa00);
-                }
+              if (Array.isArray(mesh.material)) {
+                mesh.material = mesh.material.map((m) => m.clone());
+              } else {
+                mesh.material = mesh.material.clone();
               }
-            } else if (mesh.material.emissive) {
-              mesh.material.emissive.setHex(0xffaa00);
-            }
 
-            selectedMesh = mesh;
+              if (Array.isArray(mesh.material)) {
+                for (const m of mesh.material) {
+                  if (m.emissive) {
+                    m.emissive.setHex(0xffaa00);
+                  }
+                }
+              } else if (mesh.material.emissive) {
+                mesh.material.emissive.setHex(0xffaa00);
+              }
+            }
+            selectedMeshes.add(mesh);
           }
+
+          function toggleHighlight(mesh) {
+            if (selectedMeshes.has(mesh)) {
+              removeHighlight(mesh);
+            } else {
+              applyHighlight(mesh);
+            }
+          }
+
+          window.addEventListener('keydown', (event) => {
+            if (event.code === 'Space') {
+              event.preventDefault();
+              if (!isHoverSelectHeld) {
+                lastHoverMesh = null;
+              }
+              isHoverSelectHeld = true;
+            } else if (event.key === 'Shift') {
+              isShiftMultiSelect = true;
+            }
+          });
+
+          window.addEventListener('keyup', (event) => {
+            if (event.code === 'Space') {
+              event.preventDefault();
+              isHoverSelectHeld = false;
+              lastHoverMesh = null;
+            } else if (event.key === 'Shift') {
+              isShiftMultiSelect = false;
+            }
+          });
 
           async function checkUrl(url) {
             try {
@@ -305,27 +372,62 @@
             loadModel(modelUrl);
           }
 
-          function onClick(event) {
+          function updatePointerFromEvent(event) {
             const rect = renderer.domElement.getBoundingClientRect();
-
             mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
             mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+          }
+
+          function handlePointerMove(event) {
+            if (!isHoverSelectHeld) {
+              return;
+            }
+            updatePointerFromEvent(event);
+            raycaster.setFromCamera(mouse, camera);
+            const hits = raycaster.intersectObjects(pickableMeshes, true);
+            if (hits.length === 0) {
+              lastHoverMesh = null;
+              return;
+            }
+            const hit = hits[0].object;
+            if (lastHoverMesh === hit) {
+              return;
+            }
+            lastHoverMesh = hit;
+            if (!selectedMeshes.has(hit)) {
+              applyHighlight(hit);
+              reportSelection(hit);
+            }
+          }
+
+          function onClick(event) {
+            updatePointerFromEvent(event);
 
             raycaster.setFromCamera(mouse, camera);
             const hits = raycaster.intersectObjects(pickableMeshes, true);
 
             if (hits.length === 0) {
-              clearHighlight();
-              sendSelectedPart('Nothing selected');
+              if (!isShiftMultiSelect && !isHoverSelectHeld) {
+                clearHighlight();
+                sendSelectedPart('Nothing selected', 0);
+              }
               return;
             }
 
             const hit = hits[0].object;
-            applyHighlight(hit);
 
-            const name =
-              hit.name || (hit.parent && hit.parent.name) || '(unnamed part)';
-            sendSelectedPart(name);
+            if (!isShiftMultiSelect && !isHoverSelectHeld) {
+              clearHighlight();
+              applyHighlight(hit);
+            } else if (isShiftMultiSelect) {
+              toggleHighlight(hit);
+            } else {
+              if (!selectedMeshes.has(hit)) {
+                applyHighlight(hit);
+              }
+            }
+
+            reportSelection(hit);
           }
 
           renderer.domElement.addEventListener('click', onClick);
@@ -346,6 +448,8 @@
             controls.update();
             renderer.render(scene, camera);
           }
+
+          renderer.domElement.addEventListener('mousemove', handlePointerMove);
 
           animate();
         } catch (e) {
