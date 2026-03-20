@@ -13,7 +13,8 @@ d:/Hackathon_Clavicular/.venv/Scripts/python.exe -m uvicorn ai_dev.src.server:ap
 TERMINAL B - Mock UI (port 8091) - VERBOSE LOGGING:
 Write-Host "[$(Get-Date)] Starting Mock UI Static Server..." -ForegroundColor Cyan
 Write-Host "[$(Get-Date)] Listening on 0.0.0.0:8091" -ForegroundColor Yellow
-Set-Location documentation/person3/mock-ui; d:/Hackathon_Clavicular/.venv/Scripts/python.exe -m http.server 8091 --bind 0.0.0.0
+Write-Host "[$(Get-Date)] From workspace root, or use: cd documentation/person3/mock-ui; python.exe -m http.server 8091 --bind 0.0.0.0" -ForegroundColor Yellow
+pushd documentation/person3/mock-ui; d:/Hackathon_Clavicular/.venv/Scripts/python.exe -m http.server 8091 --bind 0.0.0.0
 
 TERMINAL C - Public Tunnel (Cloudflared) - VERBOSE:
 Write-Host "[$(Get-Date)] Starting Cloudflared Tunnel..." -ForegroundColor Cyan
@@ -70,3 +71,19 @@ NOTES:
 - If any terminal crashes or shows errors, it will display full stack trace
 - Cloudflared URL is temporary (expires when tunnel closes)
 - TIME_WAIT connections are normal and auto-clear after 60s
+
+========================================
+STABLE API TEST (NO JSON ESCAPE BUGS):
+========================================
+
+From workspace root, run either:
+
+1) Python smoke test (cross-platform):
+	d:/Hackathon_Clavicular/.venv/Scripts/python.exe ai_dev/scripts/smoke_api.py --base-url http://127.0.0.1:8016
+
+2) PowerShell smoke test:
+	powershell -ExecutionPolicy Bypass -File ai_dev/scripts/smoke_api.ps1 -BaseUrl http://127.0.0.1:8016
+
+Template payloads live in:
+- ai_dev/requests/diagnose.sample.json
+- ai_dev/requests/sources.sample.json

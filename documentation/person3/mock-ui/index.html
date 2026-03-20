@@ -352,87 +352,193 @@ Other: left arm pain</textarea>
       return url;
     }
 
+    function queryParam(name) {
+      const params = new URLSearchParams(window.location.search);
+      const value = params.get(name);
+      return value ? value.trim().replace(/\/$/, '') : '';
+    }
+
     function defaultBaseFromHost() {
-      const host = window.location.hostname;
-      if (!host || host === 'localhost' || host === '127.0.0.1') {
-        return 'http://localhost:8016';
+      const explicitApiBase = queryParam('apiBase');
+      if (explicitApiBase) {
+        return explicitApiBase;
       }
+
+      const host = window.location.hostname;
+      if (!host || host === 'localhost') {
+        return 'http://127.0.0.1:8016';
+      }
+      if (host === '127.0.0.1') {
+        return 'http://127.0.0.1:8016';
+      }
+
+      // Cloudflared UI tunnel and API tunnel are usually different URLs.
+      // In this case, pass ?apiBase=https://<api-tunnel>.trycloudflare.com
+      if (host.endsWith('.trycloudflare.com')) {
+        return '';
+      }
+
       return `http://${host}:8016`;
     }
 
     async function callApi(path, body) {
-      const res = await fetch(base() + path, {
-        method: body ? 'POST' : 'GET',
-        headers: body ? { 'Content-Type': 'application/json' } : {},
-        body: body ? JSON.stringify(body) : undefined
-      });
+      try {
+        const url = base() + path;
+        console.log(`[API] ${body ? 'POST' : 'GET'} ${url}`, body || '');
+        
+        const res = await fetch(url, {
+          method: body ? 'POST' : 'GET',
+          headers: body ? { 'Content-Type': 'application/json' } : {},
+          body: body ? JSON.stringify(body) : undefined
+        });
 
-      const text = await res.text();
-      let parsed = text;
-      try { parsed = JSON.parse(text); } catch (_) {}
+        const text = await res.text();
+        let parsed = text;
+        try { 
+          parsed = JSON.parse(text); 
+        } catch (parseErr) {
+          console.error('[API] JSON parse error:', parseErr, 'Raw:', text);
+        }
 
-      output.textContent = JSON.stringify({
-        status: res.status,
-        ok: res.ok,
-        data: parsed
-      }, null, 2);
+        console.log(`[API] Response status: ${res.status}`, parsed);
 
-      return { res, parsed };
+        output.textContent = JSON.stringify({
+          status: res.status,
+          ok: res.ok,
+          data: parsed
+        }, null, 2);
+
+        if (!res.ok) {
+          output.textContent = JSON.stringify({
+            status: res.status,
+            error: 'API returned error',
+            data: parsed
+          }, null, 2);
+          console.warn(`[API] HTTP ${res.status}: ${text}`);
+        }
+
+        return { res, parsed };
+      } catch (err) {
+        console.error('[API] Fetch error:', err);
+        output.textContent = JSON.stringify({
+          error: 'Network error: ' + err.message,
+          hint: 'Check browser console (F12) for details'
+        }, null, 2);
+        throw err;
+      }
     }
 
     function extractDiagnosis(data) {
-      if (!data || typeof data !== 'object') return null;
-      if (data.diagnosis && typeof data.diagnosis === 'object') return data.diagnosis;
-      if (data.data && typeof data.data === 'object') return data.data;
+      if (!data || typeof data !== 'object') {
+        console.warn('[extract] Invalid data:', data);
+        return null;
+      }
+      if (data.diagnosis && typeof data.diagnosis === 'object') {
+        console.log('[extract] Found .diagnosis');
+        return data.diagnosis;
+      }
+      if (data.data && typeof data.data === 'object') {
+        console.log('[extract] Found .data');
+        return data.data;
+      }
+      console.warn('[extract] Could not extract diagnosis from:', data);
       return null;
     }
 
     function extractSources(data) {
+      console.log('[extract] extractSources input:', data);
       if (!data || typeof data !== 'object') return [];
-      if (Array.isArray(data.results)) return data.results;
-      if (Array.isArray(data.sources)) return data.sources;
-      if (data.data && Array.isArray(data.data.results)) return data.data.results;
-      if (data.data && Array.isArray(data.data.sources)) return data.data.sources;
+      
+      // Try multiple paths where sources might be
+      if (Array.isArray(data.results)) {
+        console.log('[extract] Found .results array');
+        return data.results;
+      }
+      if (Array.isArray(data.sources)) {
+        console.log('[extract] Found .sources array');
+        return data.sources;
+      }
+      if (data.data) {
+        if (Array.isArray(data.data.results)) {
+          console.log('[extract] Found .data.results array');
+          return data.data.results;
+        }
+        if (Array.isArray(data.data.sources)) {
+          console.log('[extract] Found .data.sources array');
+          return data.data.sources;
+        }
+      }
+      console.warn('[extract] Could not find sources in:', data);
       return [];
     }
 
     function renderDiagnosis(data) {
+      console.log('[render] renderDiagnosis called with:', data);
       const d = extractDiagnosis(data);
+      console.log('[render] extracted diagnosis:', d);
+      
       if (!d) {
-        aiText.innerHTML = '<p>Diagnosis response missing.</p>';
+        console.warn('[render] No diagnosis found in data');
+        aiText.innerHTML = '<p style="color: red;">Diagnosis response missing. Check Raw API JSON below.</p>';
         return;
       }
 
       const conditions = Array.isArray(d.conditions) ? d.conditions : [];
+      console.log('[render] conditions:', conditions);
+      
       const conditionLines = conditions
         .map((c) => `<li><strong>${c.name || 'Condition'} (${c.likelihood || 'Unknown'})</strong>: ${c.explanation || ''}</li>`)
         .join('');
 
-      aiText.innerHTML = [
+      const html = [
         `<p><strong>Severity:</strong> ${d.severity || 'Unknown'}</p>`,
         `<p><strong>Recommended Action:</strong> ${d.action || 'N/A'}</p>`,
         conditionLines ? `<ul>${conditionLines}</ul>` : '<p>No condition details.</p>',
         `<p><strong>Disclaimer:</strong> ${d.disclaimer || 'N/A'}</p>`
       ].join('');
+      
+      console.log('[render] rendering HTML:', html);
+      aiText.innerHTML = html;
     }
 
     function renderSources(data) {
+      console.log('[render] renderSources called with:', data);
       const results = extractSources(data);
-      if (!results.length) {
+      console.log('[render] extracted sources:', results);
+      
+      if (!results || !results.length) {
+        console.warn('[render] No sources found in data');
         sourceList.innerHTML = '<li>No source links returned.</li>';
         return;
       }
 
-      sourceList.innerHTML = results
+      const html = results
         .map((item) => {
           const title = item.title || item.url || 'Medical source';
           const url = item.url || item.id || '#';
           return `<li><a href="${url}" target="_blank" rel="noopener noreferrer">${title}</a></li>`;
         })
         .join('');
+      
+      console.log('[render] rendering sources HTML');
+      sourceList.innerHTML = html;
     }
 
-    document.getElementById('healthBtn').onclick = () => callApi('/health');
+    document.getElementById('healthBtn').onclick = async () => {
+      try {
+        console.log('[UI] Testing server connection...');
+        const { res, parsed } = await callApi('/health');
+        if (res.ok) {
+          console.log('[UI] ✓ Server is healthy:', parsed);
+          output.textContent = JSON.stringify({
+            status: '✓ Server is healthy!',
+            ...parsed
+          }, null, 2);
+        }
+      } catch (err) {
+        console.error('[UI] Health check error:', err);
+      }
+    };
 
     document.getElementById('clearBtn').onclick = () => {
       output.textContent = 'Ready.';
@@ -451,43 +557,82 @@ Other: left arm pain</textarea>
     };
 
     document.getElementById('diagnoseBtn').onclick = () => {
-      const language = document.getElementById('lang').value;
-      const user_message = document.getElementById('message').value;
-      callApi('/api/diagnose', { user_message, language }).then(({ parsed }) => {
-        renderDiagnosis(parsed);
-      });
+      try {
+        const language = document.getElementById('lang').value;
+        const user_message = document.getElementById('message').value;
+        if (!user_message.trim()) {
+          output.textContent = JSON.stringify({
+            error: 'validation_error',
+            message: 'Please enter a symptom message before analyzing.'
+          }, null, 2);
+          return;
+        }
+        callApi('/api/diagnose', { user_message, language }).then(({ parsed }) => {
+          console.log('[UI] Rendering diagnosis:', parsed);
+          renderDiagnosis(parsed);
+        }).catch((err) => {
+          console.error('[UI] Diagnosis error:', err);
+          aiText.innerHTML = `<p style="color: red;">Error: ${err.message}</p>`;
+        });
+      } catch (err) {
+        console.error('[UI] Diagnosis handler error:', err);
+        output.textContent = JSON.stringify({ error: err.message }, null, 2);
+      }
     };
 
     document.getElementById('sourcesBtn').onclick = () => {
-      const query = document.getElementById('query').value.trim();
-      if (!query) {
-        output.textContent = JSON.stringify({
-          status: 'validation_error',
-          message: 'Please enter a medical query before calling /api/sources.'
-        }, null, 2);
-        return;
+      try {
+        const query = document.getElementById('query').value.trim();
+        if (!query) {
+          output.textContent = JSON.stringify({
+            status: 'validation_error',
+            message: 'Please enter a medical query before calling /api/sources.'
+          }, null, 2);
+          return;
+        }
+        callApi('/api/sources', { query }).then(({ parsed }) => {
+          console.log('[UI] Rendering sources:', parsed);
+          renderSources(parsed);
+        }).catch((err) => {
+          console.error('[UI] Sources error:', err);
+          sourceList.innerHTML = `<li style="color: red;">Error: ${err.message}</li>`;
+        });
+      } catch (err) {
+        console.error('[UI] Sources handler error:', err);
+        output.textContent = JSON.stringify({ error: err.message }, null, 2);
       }
-      callApi('/api/sources', { query }).then(({ parsed }) => {
-        renderSources(parsed);
-      });
     };
 
     document.getElementById('runAllBtn').onclick = async () => {
-      const language = document.getElementById('lang').value;
-      const user_message = document.getElementById('message').value;
-      const query = document.getElementById('query').value.trim();
+      try {
+        const language = document.getElementById('lang').value;
+        const user_message = document.getElementById('message').value;
+        const query = document.getElementById('query').value.trim();
 
-      const combined = await callApi('/api/analyze', {
-        input_text: query || user_message,
-        language,
-        num_results: 5
-      });
-      renderDiagnosis(combined.parsed);
-      renderSources(combined.parsed);
+        if (!user_message.trim()) {
+          output.textContent = JSON.stringify({
+            error: 'validation_error',
+            message: 'Please enter a symptom message.'
+          }, null, 2);
+          return;
+        }
 
-      output.textContent = JSON.stringify({
-        combined: combined.parsed
-      }, null, 2);
+        const combined = await callApi('/api/analyze', {
+          input_text: query || user_message,
+          language,
+          num_results: 5
+        });
+        console.log('[UI] Rendering full analysis:', combined.parsed);
+        renderDiagnosis(combined.parsed);
+        renderSources(combined.parsed);
+
+        output.textContent = JSON.stringify({
+          combined: combined.parsed
+        }, null, 2);
+      } catch (err) {
+        console.error('[UI] Full analysis error:', err);
+        output.textContent = JSON.stringify({ error: err.message }, null, 2);
+      }
     };
 
     document.querySelectorAll('[data-sample]').forEach((btn) => {
@@ -501,6 +646,19 @@ Other: left arm pain</textarea>
 
     baseUrlInput.value = defaultBaseFromHost();
     base();
+
+    if (!baseUrlInput.value && window.location.hostname.endsWith('.trycloudflare.com')) {
+      output.textContent = JSON.stringify({
+        hint: 'Cloudflared mode detected. Add ?apiBase=https://<your-api-tunnel>.trycloudflare.com to this UI URL, or paste API URL in Base URL field.',
+        example: `${window.location.origin}${window.location.pathname}?apiBase=https://your-api-tunnel.trycloudflare.com`
+      }, null, 2);
+    }
+    
+    // Log initialization
+    console.log('[Init] Person 3 AI UI loaded');
+    console.log('[Init] API base URL:', baseUrlInput.value);
+    console.log('[Init] Open browser console (F12) to see detailed API logs');
+    console.log('[Init] Click any button to test endpoints');
 
   </script>
 </body>

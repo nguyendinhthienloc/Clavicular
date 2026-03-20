@@ -31,6 +31,27 @@ This folder is dedicated to Person 3 AI development and is intentionally separat
   - Body:
     - `{ "user_message": "Chest pressure, left arm pain, severity 9", "language": "en" }`
 
+## Stable API smoke tests (recommended for all computers)
+
+Use checked-in JSON templates to avoid shell escaping bugs.
+
+- Diagnose template: `ai_dev/requests/diagnose.sample.json`
+- Sources template: `ai_dev/requests/sources.sample.json`
+
+PowerShell (Windows):
+- `d:/Hackathon_Clavicular/.venv/Scripts/python.exe ai_dev/scripts/smoke_api.py --base-url http://127.0.0.1:8016`
+- or `powershell -ExecutionPolicy Bypass -File ai_dev/scripts/smoke_api.ps1 -BaseUrl http://127.0.0.1:8016`
+
+Cross-platform (Windows/macOS/Linux with Python):
+- `python ai_dev/scripts/smoke_api.py --base-url http://127.0.0.1:8016`
+
+Cross-platform curl (Windows/macOS/Linux):
+- `curl -s -X POST "http://127.0.0.1:8016/api/diagnose" -H "Content-Type: application/json" --data-binary @ai_dev/requests/diagnose.sample.json`
+- `curl -s -X POST "http://127.0.0.1:8016/api/sources" -H "Content-Type: application/json" --data-binary @ai_dev/requests/sources.sample.json`
+
+If Exa key is not configured, skip sources:
+- `python ai_dev/scripts/smoke_api.py --base-url http://127.0.0.1:8016 --skip-sources`
+
 - TTS endpoint:
   - `POST http://localhost:8000/api/tts`
   - Body:

@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, Literal, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
@@ -63,6 +65,22 @@ def _first_non_empty(*values: Optional[str]) -> Optional[str]:
         if value and value.strip():
             return value.strip()
     return None
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=400,
+        content={
+            "success": False,
+            "error": "Invalid request payload",
+            "path": request.url.path,
+            "hint": "Send a valid JSON object with Content-Type: application/json. Use ai_dev/requests/*.sample.json as templates.",
+            "details": exc.errors(),
+        },
+    )
 
 # Keep open CORS for hackathon integration speed.
 app.add_middleware(

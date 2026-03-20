@@ -60,14 +60,28 @@ console.log(data.results);
 # 1) Health
 curl.exe -s http://192.168.51.28:8016/health
 
-# 2) Diagnose (OpenRouter text response)
-$diag = '{"user_message":"Body region: Chest\nPain type: pressure\nDuration: 30 minutes\nSeverity: 9\nOther: left arm pain","language":"en"}'
-Invoke-RestMethod -Uri 'http://192.168.51.28:8016/api/diagnose' -Method Post -ContentType 'application/json' -Body $diag | ConvertTo-Json -Depth 8
+# 2) Diagnose (robust: write body to file, then post file)
+$diag = @'
+{
+  "user_message": "Body region: Chest\nPain type: pressure\nDuration: 30 minutes\nSeverity: 9\nOther: left arm pain",
+  "language": "en"
+}
+'@
+Set-Content -Path .\diag_req.json -Value $diag -Encoding utf8
+curl.exe -s -X POST "http://192.168.51.28:8016/api/diagnose" -H "Content-Type: application/json" --data-binary "@diag_req.json"
 
-# 3) Sources (Exa URL response)
-$src = '{"query":"chest pain warning signs","num_results":5}'
-Invoke-RestMethod -Uri 'http://192.168.51.28:8016/api/sources' -Method Post -ContentType 'application/json' -Body $src | ConvertTo-Json -Depth 8
+# 3) Sources (robust: write body to file, then post file)
+$src = @'
+{
+  "query": "chest pain warning signs",
+  "num_results": 5
+}
+'@
+Set-Content -Path .\src_req.json -Value $src -Encoding utf8
+curl.exe -s -X POST "http://192.168.51.28:8016/api/sources" -H "Content-Type: application/json" --data-binary "@src_req.json"
 ```
+
+PowerShell note: prefer `curl.exe` (not `curl` alias) and avoid inline JSON escaping for complex payloads.
 
 ## Image endpoint note
 
