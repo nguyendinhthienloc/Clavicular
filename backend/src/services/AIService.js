@@ -1,31 +1,26 @@
 import config from '../config/config.js'
 import ServiceResponse from '../helper/ServiceResponse.js';
 import { GoogleGenAI } from '@google/genai';
-const gemini = new GoogleGenAI(config.gemini.APIKey);
+import OpenAI from 'openai'
+
+const client = new OpenAI({
+	apiKey: config.openai.APIKey
+});
 
 class AIService {
 	constructor() {
 		
 	}
 
-	async sendPrompt(prompt, model = 'gemini-flash-latest') {
+	async sendPrompt(instructions, prompt) {
 		try {
-			await gemini.models.get({ model: model });
-		} catch (err) {
-			const response = new ServiceResponse(
-				false,
-				422,
-				"Cannot load model",
-				err.toString()
-			);
-			return response;
-		}
-		try {
-			const data = await gemini.models.generateContent({
-				model: model,
-				contents: prompt
+			const data = await client.responses.create({
+				model: 'gpt-5.4',
+				instructions: instructions,
+				input: prompt
 			});
-			const text = data.candidates[0].content.parts[0].text;
+
+			const text = data.output_text;
 			const response = new ServiceResponse(
 				true,
 				200,

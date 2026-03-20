@@ -7,7 +7,7 @@ class AIController {
 	async sendPrompt(req, res, next) {
 		try {
 			const prompt = req.body.prompt;
-			const model = req.body.model;
+			const instructions = req.body.instructions;
 
 			if (!prompt) {
 				const response = new ServiceResponse(
@@ -27,7 +27,7 @@ class AIController {
 				return void res.status(response.statusCode).json(response.get());
 			}
 
-			const response = await AIService.sendPrompt(prompt, model);
+			const response = await AIService.sendPrompt(instructions, prompt);
 			return void res.status(response.statusCode).json(response.get());
 		} catch (error) {
 			next(error);

@@ -14,7 +14,11 @@ const config = {
 	},
 
 	gemini: {
-		APIKey: process.env.GEMINI_API_KEY,
+		APIKey: process.env.GEMINI_API_KEY
+	},
+
+	openai: {
+		APIKey: process.env.OPENAI_API_KEY
 	}
 }
 
