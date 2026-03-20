@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:model_viewer_plus/model_viewer_plus.dart';
+import 'three_model_view.dart';
 
-class MainScreen extends StatelessWidget {
-  const MainScreen({super.key});
+class ModelPickerScreen extends StatefulWidget {
+  const ModelPickerScreen({super.key});
+
+  @override
+  State<ModelPickerScreen> createState() => _ModelPickerScreenState();
+}
+
+class _ModelPickerScreenState extends State<ModelPickerScreen> {
+  String selectedPart = 'Nothing selected';
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +20,6 @@ class MainScreen extends StatelessWidget {
             width: 80,
             color: Colors.grey.shade800,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 IconButton(
                   icon: const Icon(Icons.home, color: Colors.white),
@@ -32,7 +38,7 @@ class MainScreen extends StatelessWidget {
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
                   Expanded(
@@ -42,25 +48,26 @@ class MainScreen extends StatelessWidget {
                         border: Border.all(color: Colors.grey),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const ModelViewer(
-                        src: 'assets/my_model.glb',
-                        alt: '3D model',
-                        autoRotate: true,
-                        cameraControls: true,
-                        disableZoom: false,
-                        backgroundColor: Color(0xFFEFEFEF),
+                      child: ThreeModelView(
+                        onPartSelected: (partName) {
+                          setState(() {
+                            selectedPart = partName;
+                          });
+                        },
                       ),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Container(
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Center(
-                        child: Text('Viewport 2'),
+                      child: Text(
+                        'Selected part: $selectedPart',
+                        style: const TextStyle(fontSize: 20),
                       ),
                     ),
                   ),
