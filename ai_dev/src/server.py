@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Literal
+from typing import Any, Dict, Literal, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,8 +22,17 @@ except ImportError:
 
 
 class DiagnoseRequest(BaseModel):
-    user_message: str = Field(min_length=1)
+    user_message: Optional[str] = None
+    query: Optional[str] = None
     language: Literal["en", "vi"] = "en"
+
+
+class AnalyzeRequest(BaseModel):
+    input_text: Optional[str] = None
+    user_message: Optional[str] = None
+    query: Optional[str] = None
+    language: Literal["en", "vi"] = "en"
+    num_results: int = Field(default=5, ge=1, le=10)
 
 
 class TTSRequest(BaseModel):
@@ -33,8 +42,9 @@ class TTSRequest(BaseModel):
 
 
 class SourcesRequest(BaseModel):
-    query: str = Field(min_length=1)
-    num_results: int = 5
+    query: Optional[str] = None
+    user_message: Optional[str] = None
+    num_results: int = Field(default=5, ge=1, le=10)
 
 
 class ImageRequest(BaseModel):
@@ -46,6 +56,13 @@ class EchoRequest(BaseModel):
 
 
 app = FastAPI(title="BodyCheck Person 3 API", version="1.0.0")
+
+
+def _first_non_empty(*values: Optional[str]) -> Optional[str]:
+    for value in values:
+        if value and value.strip():
+            return value.strip()
+    return None
 
 # Keep open CORS for hackathon integration speed.
 app.add_middleware(
@@ -78,6 +95,7 @@ def root() -> Dict[str, Any]:
                         "POST /api/echo",
                         "POST /api/diagnose",
                         "POST /api/sources",
+                    "POST /api/analyze",
                         "POST /api/image",
                 ],
         }
@@ -182,8 +200,12 @@ def echo(payload: EchoRequest) -> Dict[str, Any]:
 
 @app.post("/api/diagnose")
 def diagnose(payload: DiagnoseRequest) -> Dict[str, Any]:
+    user_message = _first_non_empty(payload.user_message, payload.query)
+    if not user_message:
+        raise HTTPException(status_code=400, detail="Missing user_message (or query)")
+
     openrouter_key = get_env("OPENROUTER_KEY")
-    diagnosis = call_diagnosis(openrouter_key, payload.user_message, payload.language)
+    diagnosis = call_diagnosis(openrouter_key, user_message, payload.language)
     return {"success": True, "data": diagnosis}
 
 
@@ -208,16 +230,49 @@ def tts(payload: TTSRequest) -> Dict[str, Any]:
 
 @app.post("/api/sources")
 def sources(payload: SourcesRequest) -> Dict[str, Any]:
+    query = _first_non_empty(payload.query, payload.user_message)
+    if not query:
+        raise HTTPException(status_code=400, detail="Missing query (or user_message)")
+
     exa_key = get_env("EXA_KEY")
     if not exa_key:
         raise HTTPException(status_code=400, detail="Missing EXA_KEY")
 
     try:
-        results = search_medical_sources(exa_key, payload.query, payload.num_results)
+        results = search_medical_sources(exa_key, query, payload.num_results)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Exa failed: {exc}") from exc
 
     return {"success": True, "results": results}
+
+
+@app.post("/api/analyze")
+def analyze(payload: AnalyzeRequest) -> Dict[str, Any]:
+    text_input = _first_non_empty(payload.input_text, payload.user_message, payload.query)
+    if not text_input:
+        raise HTTPException(status_code=400, detail="Missing input_text (or user_message/query)")
+
+    openrouter_key = get_env("OPENROUTER_KEY")
+    diagnosis = call_diagnosis(openrouter_key, text_input, payload.language)
+
+    exa_key = get_env("EXA_KEY")
+    sources_results = []
+    sources_error = None
+    if exa_key:
+        try:
+            sources_results = search_medical_sources(exa_key, text_input, payload.num_results)
+        except Exception as exc:
+            sources_error = f"Exa failed: {exc}"
+    else:
+        sources_error = "Missing EXA_KEY"
+
+    return {
+        "success": True,
+        "input": text_input,
+        "diagnosis": diagnosis,
+        "sources": sources_results,
+        "sources_error": sources_error,
+    }
 
 
 @app.post("/api/image")

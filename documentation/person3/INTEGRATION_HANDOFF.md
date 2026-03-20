@@ -2,7 +2,7 @@
 
 ## Server endpoint
 
-- Base URL on local network (latest build): http://192.168.51.28:8014
+- Base URL on local network (latest build): http://192.168.51.28:8016
 - Health check: GET /health
 - Diagnose: POST /api/diagnose
 - Sources: POST /api/sources
@@ -13,7 +13,7 @@
 Use this exact code from frontend:
 
 ```javascript
-const res = await fetch('http://192.168.51.28:8014/api/diagnose', {
+const res = await fetch('http://192.168.51.28:8016/api/diagnose', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -29,7 +29,7 @@ const { data } = await res.json();
 ## Browser console test from teammate laptop
 
 ```javascript
-const res = await fetch('http://192.168.51.28:8014/api/diagnose', {
+const res = await fetch('http://192.168.51.28:8016/api/diagnose', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -44,7 +44,7 @@ console.log(await res.json());
 ## Sources endpoint example
 
 ```javascript
-const res = await fetch('http://192.168.51.28:8014/api/sources', {
+const res = await fetch('http://192.168.51.28:8016/api/sources', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ query: 'appendicitis symptoms', num_results: 3 })
@@ -52,6 +52,21 @@ const res = await fetch('http://192.168.51.28:8014/api/sources', {
 
 const data = await res.json();
 console.log(data.results);
+```
+
+## Curl tests from other computer (PowerShell)
+
+```powershell
+# 1) Health
+curl.exe -s http://192.168.51.28:8016/health
+
+# 2) Diagnose (OpenRouter text response)
+$diag = '{"user_message":"Body region: Chest\nPain type: pressure\nDuration: 30 minutes\nSeverity: 9\nOther: left arm pain","language":"en"}'
+Invoke-RestMethod -Uri 'http://192.168.51.28:8016/api/diagnose' -Method Post -ContentType 'application/json' -Body $diag | ConvertTo-Json -Depth 8
+
+# 3) Sources (Exa URL response)
+$src = '{"query":"chest pain warning signs","num_results":5}'
+Invoke-RestMethod -Uri 'http://192.168.51.28:8016/api/sources' -Method Post -ContentType 'application/json' -Body $src | ConvertTo-Json -Depth 8
 ```
 
 ## Image endpoint note

@@ -118,6 +118,12 @@
       margin-top: 8px;
     }
 
+    .helper {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
     button {
       border: 0;
       border-radius: 10px;
@@ -180,6 +186,44 @@
       font-weight: 600;
     }
 
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .result-box {
+      border: 1px solid #d7ccb9;
+      background: #fffdf9;
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .result-box h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .result-box p {
+      margin: 6px 0;
+      color: #243446;
+    }
+
+    .result-box ul {
+      margin: 8px 0 0 18px;
+      padding: 0;
+    }
+
+    .result-box a {
+      color: #1d4ed8;
+      text-decoration: none;
+    }
+
+    .result-box a:hover {
+      text-decoration: underline;
+    }
+
     @media (max-width: 700px) {
       body { padding: 10px; }
       .hero { padding: 16px; }
@@ -205,9 +249,14 @@
       <div class="row">
         <label for="baseUrl">Base URL</label>
         <input id="baseUrl" value="http://localhost:8016" />
+        <div class="chips" aria-label="connection presets">
+          <button class="chip" type="button" id="useLocalBtn">Use Localhost</button>
+          <button class="chip" type="button" id="useHostBtn">Use This Device Host</button>
+        </div>
+        <p class="helper">Tip: friends on the same Wi-Fi should use this device host.</p>
       </div>
       <div class="button-row">
-        <button id="healthBtn" class="btn-primary">Check /health</button>
+        <button id="healthBtn" class="btn-primary">Test Server Connection</button>
       </div>
     </section>
 
@@ -237,7 +286,8 @@ Other: left arm pain</textarea>
       </div>
 
       <div class="button-row">
-        <button id="diagnoseBtn" class="btn-primary">POST /api/diagnose</button>
+        <button id="runAllBtn" class="btn-secondary">Run Full AI Check</button>
+        <button id="diagnoseBtn" class="btn-primary">Analyze Symptoms</button>
       </div>
     </section>
 
@@ -248,19 +298,37 @@ Other: left arm pain</textarea>
         <input id="query" value="chest pain warning signs" />
       </div>
       <div class="button-row">
-        <button id="sourcesBtn" class="btn-secondary">POST /api/sources</button>
+        <button id="sourcesBtn" class="btn-secondary">Find Trusted Sources</button>
       </div>
       <p class="tip">Tip: use short symptom topics for faster, cleaner source results.</p>
     </section>
 
     <section class="card">
-      <h2>Response</h2>
+      <h2>AI Wrapper Output</h2>
+      <div class="result-grid">
+        <div class="result-box">
+          <h3>OpenRouter Medical Summary</h3>
+          <div id="aiText">Run a diagnosis to see readable AI summary text here.</div>
+        </div>
+        <div class="result-box">
+          <h3>Exa Trusted Source URLs</h3>
+          <ul id="sourceList">
+            <li>No source links yet.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="button-row" style="margin-top: 0; margin-bottom: 10px;">
+        <button id="clearBtn" class="btn-muted" type="button">Clear Output</button>
+      </div>
+      <p class="helper">Raw API JSON is shown below for debugging.</p>
       <pre id="output">Ready.</pre>
     </section>
   </div>
 
   <script>
     const output = document.getElementById('output');
+    const aiText = document.getElementById('aiText');
+    const sourceList = document.getElementById('sourceList');
     const baseUrlInput = document.getElementById('baseUrl');
     const baseLabel = document.getElementById('baseLabel');
     const samplePrompts = {
@@ -284,6 +352,14 @@ Other: left arm pain</textarea>
       return url;
     }
 
+    function defaultBaseFromHost() {
+      const host = window.location.hostname;
+      if (!host || host === 'localhost' || host === '127.0.0.1') {
+        return 'http://localhost:8016';
+      }
+      return `http://${host}:8016`;
+    }
+
     async function callApi(path, body) {
       const res = await fetch(base() + path, {
         method: body ? 'POST' : 'GET',
@@ -300,14 +376,86 @@ Other: left arm pain</textarea>
         ok: res.ok,
         data: parsed
       }, null, 2);
+
+      return { res, parsed };
+    }
+
+    function extractDiagnosis(data) {
+      if (!data || typeof data !== 'object') return null;
+      if (data.diagnosis && typeof data.diagnosis === 'object') return data.diagnosis;
+      if (data.data && typeof data.data === 'object') return data.data;
+      return null;
+    }
+
+    function extractSources(data) {
+      if (!data || typeof data !== 'object') return [];
+      if (Array.isArray(data.results)) return data.results;
+      if (Array.isArray(data.sources)) return data.sources;
+      if (data.data && Array.isArray(data.data.results)) return data.data.results;
+      if (data.data && Array.isArray(data.data.sources)) return data.data.sources;
+      return [];
+    }
+
+    function renderDiagnosis(data) {
+      const d = extractDiagnosis(data);
+      if (!d) {
+        aiText.innerHTML = '<p>Diagnosis response missing.</p>';
+        return;
+      }
+
+      const conditions = Array.isArray(d.conditions) ? d.conditions : [];
+      const conditionLines = conditions
+        .map((c) => `<li><strong>${c.name || 'Condition'} (${c.likelihood || 'Unknown'})</strong>: ${c.explanation || ''}</li>`)
+        .join('');
+
+      aiText.innerHTML = [
+        `<p><strong>Severity:</strong> ${d.severity || 'Unknown'}</p>`,
+        `<p><strong>Recommended Action:</strong> ${d.action || 'N/A'}</p>`,
+        conditionLines ? `<ul>${conditionLines}</ul>` : '<p>No condition details.</p>',
+        `<p><strong>Disclaimer:</strong> ${d.disclaimer || 'N/A'}</p>`
+      ].join('');
+    }
+
+    function renderSources(data) {
+      const results = extractSources(data);
+      if (!results.length) {
+        sourceList.innerHTML = '<li>No source links returned.</li>';
+        return;
+      }
+
+      sourceList.innerHTML = results
+        .map((item) => {
+          const title = item.title || item.url || 'Medical source';
+          const url = item.url || item.id || '#';
+          return `<li><a href="${url}" target="_blank" rel="noopener noreferrer">${title}</a></li>`;
+        })
+        .join('');
     }
 
     document.getElementById('healthBtn').onclick = () => callApi('/health');
 
+    document.getElementById('clearBtn').onclick = () => {
+      output.textContent = 'Ready.';
+      aiText.innerHTML = 'Run a diagnosis to see readable AI summary text here.';
+      sourceList.innerHTML = '<li>No source links yet.</li>';
+    };
+
+    document.getElementById('useLocalBtn').onclick = () => {
+      baseUrlInput.value = 'http://localhost:8016';
+      base();
+    };
+
+    document.getElementById('useHostBtn').onclick = () => {
+      baseUrlInput.value = defaultBaseFromHost();
+      base();
+    };
+
     document.getElementById('diagnoseBtn').onclick = () => {
       const language = document.getElementById('lang').value;
       const user_message = document.getElementById('message').value;
-      callApi('/api/diagnose', { user_message, language });
+      callApi('/api/diagnose', { user_message, language }).then(({ parsed }) => {
+        renderDiagnosis(parsed);
+      });
     };
 
     document.getElementById('sourcesBtn').onclick = () => {
@@ -319,7 +467,27 @@ Other: left arm pain</textarea>
         }, null, 2);
         return;
       }
-      callApi('/api/sources', { query });
+      callApi('/api/sources', { query }).then(({ parsed }) => {
+        renderSources(parsed);
+      });
+    };
+
+    document.getElementById('runAllBtn').onclick = async () => {
+      const language = document.getElementById('lang').value;
+      const user_message = document.getElementById('message').value;
+      const query = document.getElementById('query').value.trim();
+
+      const combined = await callApi('/api/analyze', {
+        input_text: query || user_message,
+        language,
+        num_results: 5
+      });
+      renderDiagnosis(combined.parsed);
+      renderSources(combined.parsed);
+
+      output.textContent = JSON.stringify({
+        combined: combined.parsed
+      }, null, 2);
     };
 
     document.querySelectorAll('[data-sample]').forEach((btn) => {
@@ -330,6 +498,9 @@ Other: left arm pain</textarea>
         document.getElementById('message').value = sample.text;
       });
     });
+
+    baseUrlInput.value = defaultBaseFromHost();
+    base();
 
   </script>
 </body>
