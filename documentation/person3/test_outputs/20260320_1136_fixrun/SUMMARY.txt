@@ -1,0 +1,3 @@
+﻿test2_severity=Medium
+exa_first_url=https://www.mayoclinic.org/diseases-conditions/appendicitis/symptoms-causes/syc-20369543?hl=hi&sl=en&tl=hi&client=srp&prev=search
+fal_primary=fail

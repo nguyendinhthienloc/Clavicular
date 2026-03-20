@@ -1,0 +1,19 @@
+﻿{
+    "requestId":  "d70ac7180543cbd666e4f5699ef12dfa",
+    "results":  [
+                    {
+                        "id":  "https://applications.emro.who.int/imemrf/Pak_J_Med_Sci/Pak_J_Med_Sci_2009_25_3_490.pdf",
+                        "title":  "Appendicitis in children",
+                        "url":  "https://applications.emro.who.int/imemrf/Pak_J_Med_Sci/Pak_J_Med_Sci_2009_25_3_490.pdf",
+                        "publishedDate":  "2009-05-15T00:00:00.000Z"
+                    }
+                ],
+    "searchTime":  13.9,
+    "resolvedSearchType":  "neural",
+    "costDollars":  {
+                        "total":  0.007,
+                        "search":  {
+                                       "neural":  0.007
+                                   }
+                    }
+}

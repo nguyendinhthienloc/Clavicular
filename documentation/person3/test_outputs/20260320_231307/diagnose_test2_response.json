@@ -1,0 +1,27 @@
+﻿{
+    "success":  true,
+    "data":  {
+                 "conditions":  [
+                                    {
+                                        "name":  "Tension Headache",
+                                        "likelihood":  "High",
+                                        "explanation":  "Common headache from stress or tension."
+                                    },
+                                    {
+                                        "name":  "Migraine",
+                                        "likelihood":  "Medium",
+                                        "explanation":  "Can cause dull, throbbing pain with nausea."
+                                    }
+                                ],
+                 "severity":  "Medium",
+                 "action":  "Consider over-the-counter pain relief and rest in a quiet environment.",
+                 "home_tips":  [
+                                   "Stay hydrated",
+                                   "Apply a cold compress to your forehead"
+                               ],
+                 "warning_signs":  [
+                                       "Severe pain, visual disturbances, or sudden changes in sensation"
+                                   ],
+                 "disclaimer":  "This is AI information only, not medical advice. For emergencies call 115."
+             }
+}
