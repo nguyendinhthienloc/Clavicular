@@ -46,3 +46,6 @@ frontend/hackathon_clavicular/app.*.symbols
 
 # Obfuscation related
 frontend/hackathon_clavicular/app.*.map.json
+
+/backend/node_modules
+/backend/package-lock.json
