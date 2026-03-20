@@ -1,7 +1,7 @@
 import config from '../config/config.js'
 import ServiceResponse from '../helper/ServiceResponse.js';
 import { GoogleGenAI } from '@google/genai';
-const gemini = new GoogleGenAI(config.gemini.APIkey);
+const gemini = new GoogleGenAI(config.gemini.APIKey);
 
 class AIService {
 	constructor() {
@@ -22,7 +22,7 @@ class AIService {
 		}
 		try {
 			const data = await gemini.models.generateContent({
-				model: module,
+				model: model,
 				contents: prompt
 			});
 			const text = data.candidates[0].content.parts[0].text;
@@ -44,3 +44,5 @@ class AIService {
 		}
 	}
 }
+
+export default new AIService();

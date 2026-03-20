@@ -19,6 +19,8 @@ const customStream = {
 app.use(helmet());
 app.use(cookies());
 
+import AIRoutes from './routes/AIRoute.js';
+
 // IMPORT ROUTES
 
 // CORS
@@ -42,6 +44,8 @@ app.get('/health', (req, res) => {
 		environment: config.env
 	});
 });
+
+app.use('/api/ai', AIRoutes);
 
 // Root endpoint
 app.get('/', (req, res, next) => {

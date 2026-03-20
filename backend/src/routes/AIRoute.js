@@ -5,7 +5,6 @@ import ValidatorMiddleware from '../middleware/ValidatorMiddleware.js';
 
 router.all('/send-prompt',
 	ValidatorMiddleware.validateMethods(['POST']),
-	ValidatorMiddleware.validateAccessToken,
 	ValidatorMiddleware.validateContentType,
 	AIController.sendPrompt
 );
