@@ -48,3 +48,5 @@ frontend/hackathon_clavicular/app.*.symbols
 frontend/hackathon_clavicular/app.*.map.json
 /backend/node_modules
 /backend/package-lock.json
+
+/backend/.env
