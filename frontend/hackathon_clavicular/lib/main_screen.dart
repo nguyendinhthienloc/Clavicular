@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:model_viewer_plus/model_viewer_plus.dart';
+import 'package:hackathon_clavicular/viewport_model.dart';
+import 'package:hackathon_clavicular/viewport_chat.dart';
 
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
@@ -35,35 +36,9 @@ class MainScreen extends StatelessWidget {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
-                  Expanded(
-                    child: Container(
-                      clipBehavior: Clip.antiAlias,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const ModelViewer(
-                        src: 'assets/my_model.glb',
-                        alt: '3D model',
-                        autoRotate: true,
-                        cameraControls: true,
-                        disableZoom: false,
-                        backgroundColor: Color(0xFFEFEFEF),
-                      ),
-                    ),
-                  ),
+                  Expanded(child: const ViewportModel()),
                   const SizedBox(width: 16),
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Center(
-                        child: Text('Viewport 2'),
-                      ),
-                    ),
-                  ),
+                  Expanded(child: const ViewportChat()),
                 ],
               ),
             ),
