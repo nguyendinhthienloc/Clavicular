@@ -128,8 +128,10 @@ def call_diagnosis(openrouter_key: str, user_message: str, language: str = "en")
 
     try:
         return _request_diagnosis(openrouter_key, primary_model, system_prompt, user_message)
-    except Exception:
+    except Exception as exc:
+        print(f"[openrouter] primary failed: {exc}")
         try:
             return _request_diagnosis(openrouter_key, FALLBACK_MODEL, system_prompt, user_message)
-        except Exception:
+        except Exception as fallback_exc:
+            print(f"[openrouter] fallback failed: {fallback_exc}")
             return fallback_diagnosis(selected_language)

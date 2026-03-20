@@ -1,6 +1,6 @@
 # AI Dev (Python Only)
 
-This folder is dedicated to Person 3 AI development and is intentionally separate from frontend and backend app code.
+This folder is dedicated to Thien Loc's AI development and is intentionally separate from frontend and backend app code.
 
 ## What is inside
 
