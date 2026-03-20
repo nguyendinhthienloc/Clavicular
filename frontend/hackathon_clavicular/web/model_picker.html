@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Model Picker</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: sans-serif;
+      }
+
+      body {
+        background: #f4f6f8;
+        transition: background 0.3s ease;
+      }
+
+      body.dark {
+        background: #1f1f1f;
+        color: #f5f5f5;
+      }
+
+      body.light {
+        background: #f4f6f8;
+        color: #111;
+      }
+
+      #app {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        background: transparent;
+      }
+
+      #status {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        z-index: 10;
+        background: rgba(0, 0, 0, 0.75);
+        color: #f5f5f5;
+        padding: 10px 12px;
+        border-radius: 8px;
+        max-width: 80%;
+        white-space: pre-wrap;
+        font-size: 13px;
+      }
+
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="status">Booting viewer...</div>
+    </div>
+
+    <script>
+      const statusEl = document.getElementById('status');
+      const container = document.getElementById('app');
+      let renderer = null;
+      let scene = null;
+      let ambientLight = null;
+      let dirLight = null;
+      let THREERef = null;
+      let isStatusHovered = false;
+      let selectionSummaryText = 'Nothing selected';
+      let selectionFullText = 'Nothing selected';
+      let isSelectionStatusActive = false;
+
+      function setStatus(message) {
+        console.log(message);
+        isSelectionStatusActive = false;
+        statusEl.textContent = message;
+      }
+
+      function setSelectionStatus(summaryText, fullText) {
+        selectionSummaryText = summaryText;
+        selectionFullText = fullText;
+        isSelectionStatusActive = true;
+        statusEl.textContent = isStatusHovered ? fullText : summaryText;
+      }
+
+      window.addEventListener('error', (event) => {
+        setStatus(
+          'Window error:\n' +
+          (event.message || 'unknown error') +
+          '\n\n' +
+          (event.filename || '') +
+          (event.lineno ? ':' + event.lineno : '')
+        );
+      });
+
+      window.addEventListener('unhandledrejection', (event) => {
+        const reason = event.reason;
+        setStatus(
+          'Unhandled rejection:\n' +
+          (reason && reason.stack ? reason.stack : String(reason))
+        );
+      });
+
+      setStatus('Plain script started');
+
+      const params = new URLSearchParams(window.location.search);
+      const modelUrl = params.get('model');
+      const requestedTheme = params.get('theme');
+      let currentTheme = requestedTheme === 'dark' ? 'dark' : 'light';
+
+      function applyTheme(mode) {
+        currentTheme = mode === 'dark' ? 'dark' : 'light';
+        const isDark = currentTheme === 'dark';
+
+        document.body.classList.toggle('dark', isDark);
+        document.body.classList.toggle('light', !isDark);
+        container.style.background = isDark ? '#1f1f1f' : '#f4f6f8';
+        statusEl.style.background = isDark
+          ? 'rgba(21, 21, 21, 0.8)'
+          : 'rgba(255, 255, 255, 0.95)';
+        statusEl.style.color = isDark ? '#f5f5f5' : '#1f2937';
+
+        if (scene && THREERef) {
+          scene.background = new THREERef.Color(isDark ? 0x1f1f1f : 0xf4f6f8);
+        }
+        if (renderer) {
+          renderer.setClearColor(isDark ? 0x1f1f1f : 0xf4f6f8);
+        }
+        if (ambientLight) {
+          ambientLight.intensity = isDark ? 0.9 : 1.2;
+        }
+        if (dirLight) {
+          dirLight.intensity = isDark ? 1.1 : 1.5;
+        }
+      }
+
+      applyTheme(currentTheme);
+
+      window.addEventListener('message', (event) => {
+        let data = event.data;
+        if (!data) {
+          return;
+        }
+
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data);
+          } catch (e) {
+            return;
+          }
+        }
+
+        if (data.type === 'theme-changed') {
+          applyTheme(data.mode === 'dark' ? 'dark' : 'light');
+        }
+      });
+
+      statusEl.addEventListener('mouseenter', () => {
+        isStatusHovered = true;
+        if (isSelectionStatusActive) {
+          statusEl.textContent = selectionFullText;
+        }
+      });
+
+      statusEl.addEventListener('mouseleave', () => {
+        isStatusHovered = false;
+        if (isSelectionStatusActive) {
+          statusEl.textContent = selectionSummaryText;
+        }
+      });
+
+      (async function main() {
+        try {
+          setStatus('Importing three.js modules...');
+
+          const THREE = await import('./vendor/three.module.js');
+          const { OrbitControls } = await import('./vendor/controls/OrbitControls.js');
+          const { GLTFLoader } = await import('./vendor/loaders/GLTFLoader.js');
+          const { DRACOLoader } = await import('./vendor/loaders/DRACOLoader.js');
+          THREERef = THREE;
+
+          setStatus('Modules imported successfully');
+
+          scene = new THREE.Scene();
+
+          const camera = new THREE.PerspectiveCamera(
+            45,
+            container.clientWidth / container.clientHeight,
+            0.1,
+            1000
+          );
+          camera.position.set(0, 1.5, 4);
+
+          renderer = new THREE.WebGLRenderer({ antialias: true });
+          renderer.setSize(container.clientWidth, container.clientHeight);
+          renderer.setPixelRatio(window.devicePixelRatio);
+          container.appendChild(renderer.domElement);
+
+          const controls = new OrbitControls(camera, renderer.domElement);
+          controls.enableDamping = true;
+
+          ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+          scene.add(ambientLight);
+
+          dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+          dirLight.position.set(3, 5, 2);
+          scene.add(dirLight);
+
+          applyTheme(currentTheme);
+
+          const raycaster = new THREE.Raycaster();
+          const mouse = new THREE.Vector2();
+
+          let pickableMeshes = [];
+          const selectedMeshes = new Set();
+          let isShiftMultiSelect = false;
+          let isHoverSelectHeld = false;
+          let lastHoverMesh = null;
+
+          function meshLabel(mesh) {
+            if (!mesh) {
+              return null;
+            }
+            return (
+              mesh.name ||
+              (mesh.parent && mesh.parent.name) ||
+              '(unnamed part)'
+            );
+          }
+
+          function getSelectionNames() {
+            if (selectedMeshes.size === 0) {
+              return [];
+            }
+            const names = [];
+            selectedMeshes.forEach((mesh) => {
+              names.push(meshLabel(mesh));
+            });
+            return names;
+          }
+
+          function notifySelection(latestMesh) {
+            const names = getSelectionNames();
+            if (names.length === 0) {
+              setSelectionStatus('Nothing selected', 'Nothing selected');
+              if (window.parent && window.parent !== window) {
+                window.parent.postMessage(
+                  JSON.stringify({
+                    type: 'part-selected',
+                    name: 'Nothing selected',
+                    count: 0,
+                  }),
+                  '*'
+                );
+              }
+              return;
+            }
+
+            const fullText = names.join('\n');
+            let summaryText = fullText;
+            if (names.length > 3) {
+              const visible = names.slice(0, 3).join('\n');
+              summaryText = `${visible}\n...and ${names.length - 3} more`;
+            }
+            setSelectionStatus(summaryText, fullText);
+
+            let sourceMesh = latestMesh;
+            if (!sourceMesh || !selectedMeshes.has(sourceMesh)) {
+              const iter = selectedMeshes.values().next();
+              sourceMesh = iter.value;
+            }
+
+            const baseLabel = meshLabel(sourceMesh) ?? '(unnamed part)';
+            const count = names.length;
+            const finalMessage =
+              count > 1
+                ? `${baseLabel} (+${count - 1} more)`
+                : baseLabel;
+
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage(
+                JSON.stringify({
+                  type: 'part-selected',
+                  name: finalMessage,
+                  count,
+                }),
+                '*'
+              );
+            }
+          }
+
+          function removeHighlight(mesh) {
+            if (mesh.userData.originalMaterial) {
+              mesh.material = mesh.userData.originalMaterial;
+              delete mesh.userData.originalMaterial;
+            }
+            selectedMeshes.delete(mesh);
+          }
+
+          function clearHighlight() {
+            selectedMeshes.forEach((mesh) => {
+              removeHighlight(mesh);
+            });
+            selectedMeshes.clear();
+          }
+
+          function applyHighlight(mesh) {
+            if (!mesh.userData.originalMaterial) {
+              mesh.userData.originalMaterial = mesh.material;
+
+              if (Array.isArray(mesh.material)) {
+                mesh.material = mesh.material.map((m) => m.clone());
+              } else {
+                mesh.material = mesh.material.clone();
+              }
+
+              if (Array.isArray(mesh.material)) {
+                for (const m of mesh.material) {
+                  if (m.emissive) {
+                    m.emissive.setHex(0xffaa00);
+                  }
+                }
+              } else if (mesh.material.emissive) {
+                mesh.material.emissive.setHex(0xffaa00);
+              }
+            }
+            selectedMeshes.add(mesh);
+          }
+
+          function toggleHighlight(mesh) {
+            if (selectedMeshes.has(mesh)) {
+              removeHighlight(mesh);
+            } else {
+              applyHighlight(mesh);
+            }
+          }
+
+          window.addEventListener('keydown', (event) => {
+            if (event.code === 'Space') {
+              event.preventDefault();
+              if (!isHoverSelectHeld) {
+                lastHoverMesh = null;
+              }
+              isHoverSelectHeld = true;
+            } else if (event.key === 'Shift') {
+              isShiftMultiSelect = true;
+            }
+          });
+
+          window.addEventListener('keyup', (event) => {
+            if (event.code === 'Space') {
+              event.preventDefault();
+              isHoverSelectHeld = false;
+              lastHoverMesh = null;
+            } else if (event.key === 'Shift') {
+              isShiftMultiSelect = false;
+            }
+          });
+
+          async function checkUrl(url) {
+            try {
+              const response = await fetch(url, { method: 'GET' });
+              return response.ok;
+            } catch (e) {
+              setStatus('Fetch failed:\n' + url + '\n\n' + e);
+              return false;
+            }
+          }
+
+          async function loadModel(url) {
+            const ok = await checkUrl(url);
+            if (!ok) {
+              setStatus('Model URL failed:\n' + url);
+              return;
+            }
+
+            const dracoLoader = new DRACOLoader();
+            dracoLoader.setDecoderPath('./vendor/libs/draco/');
+
+            const loader = new GLTFLoader();
+            loader.setDRACOLoader(dracoLoader);
+
+            loader.load(
+              url,
+              function (gltf) {
+                setSelectionStatus('Nothing selected', 'Nothing selected');
+
+                const model = gltf.scene;
+                scene.add(model);
+
+                const box = new THREE.Box3().setFromObject(model);
+                const size = box.getSize(new THREE.Vector3()).length();
+                const center = box.getCenter(new THREE.Vector3());
+
+                model.position.sub(center);
+
+                camera.near = Math.max(size / 100, 0.01);
+                camera.far = Math.max(size * 100, 1000);
+                camera.updateProjectionMatrix();
+                camera.position.set(size * 0.6, size * 0.4, size * 0.9);
+                camera.lookAt(0, 0, 0);
+
+                pickableMeshes = [];
+                model.traverse(function (obj) {
+                  if (obj.isMesh) {
+                    pickableMeshes.push(obj);
+                  }
+                });
+              },
+              undefined,
+              function (error) {
+                setStatus(
+                  'GLTFLoader failed:\n' +
+                  url +
+                  '\n\n' +
+                  (error && error.message ? error.message : error)
+                );
+                console.error(error);
+              }
+            );
+          }
+
+          if (!modelUrl) {
+            setStatus('No model URL was passed from Flutter.');
+          } else {
+            loadModel(modelUrl);
+          }
+
+          function updatePointerFromEvent(event) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+          }
+
+          function handlePointerMove(event) {
+            if (!isHoverSelectHeld) {
+              return;
+            }
+            updatePointerFromEvent(event);
+            raycaster.setFromCamera(mouse, camera);
+            const hits = raycaster.intersectObjects(pickableMeshes, true);
+            if (hits.length === 0) {
+              lastHoverMesh = null;
+              return;
+            }
+            const hit = hits[0].object;
+            if (lastHoverMesh === hit) {
+              return;
+            }
+            lastHoverMesh = hit;
+            if (!selectedMeshes.has(hit)) {
+              applyHighlight(hit);
+              notifySelection(hit);
+            }
+          }
+
+          function onClick(event) {
+            updatePointerFromEvent(event);
+
+            raycaster.setFromCamera(mouse, camera);
+            const hits = raycaster.intersectObjects(pickableMeshes, true);
+
+            if (hits.length === 0) {
+              if (!isShiftMultiSelect && !isHoverSelectHeld) {
+                clearHighlight();
+                notifySelection(null);
+              }
+              return;
+            }
+
+            const hit = hits[0].object;
+
+            if (!isShiftMultiSelect && !isHoverSelectHeld) {
+              clearHighlight();
+              applyHighlight(hit);
+            } else if (isShiftMultiSelect) {
+              toggleHighlight(hit);
+            } else {
+              if (!selectedMeshes.has(hit)) {
+                applyHighlight(hit);
+              }
+            }
+
+            notifySelection(hit);
+          }
+
+          renderer.domElement.addEventListener('click', onClick);
+
+          function onResize() {
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+          }
+
+          window.addEventListener('resize', onResize);
+
+          function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+          }
+
+          renderer.domElement.addEventListener('mousemove', handlePointerMove);
+
+          animate();
+        } catch (e) {
+          setStatus(
+            'Module/bootstrap failure:\n' +
+            (e && e.stack ? e.stack : String(e))
+          );
+          console.error(e);
+        }
+      })();
+    </script>
+  </body>
+</html>
