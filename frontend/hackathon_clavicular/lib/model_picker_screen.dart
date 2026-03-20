@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'three_model_view.dart';
+import 'viewport_chat.dart';
 
 class ModelPickerScreen extends StatefulWidget {
   const ModelPickerScreen({super.key});
@@ -58,14 +59,9 @@ class _ModelPickerScreenState extends State<ModelPickerScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
-					Expanded(
-					child: Container(
-						decoration: BoxDecoration(
-						border: Border.all(color: Colors.grey),
-						borderRadius: BorderRadius.circular(8),
-						),
-					),
-					),
+                  Expanded(
+                    child: const ViewportChat(),
+                  ),
                 ],
               ),
             ),
