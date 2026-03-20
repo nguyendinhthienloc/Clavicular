@@ -58,19 +58,14 @@ class _ModelPickerScreenState extends State<ModelPickerScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'Selected part: $selectedPart',
-                        style: const TextStyle(fontSize: 20),
-                      ),
-                    ),
-                  ),
+					Expanded(
+					child: Container(
+						decoration: BoxDecoration(
+						border: Border.all(color: Colors.grey),
+						borderRadius: BorderRadius.circular(8),
+						),
+					),
+					),
                 ],
               ),
             ),

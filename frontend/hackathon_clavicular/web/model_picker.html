@@ -86,11 +86,6 @@
           const params = new URLSearchParams(window.location.search);
           const modelUrl = params.get('model');
 
-          setStatus(
-            'Modules imported successfully\n\nModel URL:\n' +
-            (modelUrl || '(missing)')
-          );
-
           const scene = new THREE.Scene();
           scene.background = new THREE.Color(0xefefef);
 
@@ -123,26 +118,15 @@
           let pickableMeshes = [];
 
           function sendSelectedPart(name) {
-            window.parent.postMessage(
-              JSON.stringify({
-                type: 'part-selected',
-                name: name || '(unnamed part)',
-              }),
-              '*'
-            );
+            setStatus(name || '(unnamed part)');
           }
 
           function clearHighlight() {
             if (!selectedMesh) return;
 
-            const material = selectedMesh.material;
-            if (
-              material &&
-              !Array.isArray(material) &&
-              material.emissive &&
-              selectedMesh.userData.oldEmissive
-            ) {
-              material.emissive.copy(selectedMesh.userData.oldEmissive);
+            if (selectedMesh.userData.originalMaterial) {
+              selectedMesh.material = selectedMesh.userData.originalMaterial;
+              delete selectedMesh.userData.originalMaterial;
             }
 
             selectedMesh = null;
@@ -151,10 +135,22 @@
           function applyHighlight(mesh) {
             clearHighlight();
 
-            const material = mesh.material;
-            if (material && !Array.isArray(material) && material.emissive) {
-              mesh.userData.oldEmissive = material.emissive.clone();
-              material.emissive.setHex(0xffaa00);
+            mesh.userData.originalMaterial = mesh.material;
+
+            if (Array.isArray(mesh.material)) {
+              mesh.material = mesh.material.map((m) => m.clone());
+            } else {
+              mesh.material = mesh.material.clone();
+            }
+
+            if (Array.isArray(mesh.material)) {
+              for (const m of mesh.material) {
+                if (m.emissive) {
+                  m.emissive.setHex(0xffaa00);
+                }
+              }
+            } else if (mesh.material.emissive) {
+              mesh.material.emissive.setHex(0xffaa00);
             }
 
             selectedMesh = mesh;
@@ -163,14 +159,6 @@
           async function checkUrl(url) {
             try {
               const response = await fetch(url, { method: 'GET' });
-              setStatus(
-                'Fetch check:\n' +
-                url +
-                '\n\nHTTP ' +
-                response.status +
-                ' ' +
-                response.statusText
-              );
               return response.ok;
             } catch (e) {
               setStatus('Fetch failed:\n' + url + '\n\n' + e);
@@ -180,7 +168,10 @@
 
           async function loadModel(url) {
             const ok = await checkUrl(url);
-            if (!ok) return;
+            if (!ok) {
+              setStatus('Model URL failed:\n' + url);
+              return;
+            }
 
             const dracoLoader = new DRACOLoader();
             dracoLoader.setDecoderPath('./vendor/libs/draco/');
@@ -191,7 +182,7 @@
             loader.load(
               url,
               function (gltf) {
-                setStatus('GLB loaded successfully:\n' + url);
+                setStatus('Nothing selected');
 
                 const model = gltf.scene;
                 scene.add(model);
