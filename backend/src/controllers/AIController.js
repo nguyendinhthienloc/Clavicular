@@ -76,6 +76,17 @@ class AIController {
 			next(err);
 		}
 	}
+
+	async chat(req, res, next) {
+		try {
+			const message = req.body.message;
+
+			const response = await AIService.chat(message);
+			return void res.status(response.statusCode).json(response.get());
+		} catch (err) {
+			next(err);
+		}
+	}
 }
 
 export default new AIController();
