@@ -187,3 +187,62 @@ Every diagnosis includes:
 3. Rehearse presentation with team
 4. Final live testing before judging
 
+---
+
+## Update: Whisper STT Integration (March 22, 2026)
+
+### What was implemented
+
+1. Added OpenAI Whisper client for speech-to-text
+2. Added new endpoint: `POST /api/transcribe`
+3. Added browser recording test controls in `/demo`
+4. Added multipart upload dependency in Python environment
+
+### Files changed
+
+1. `ai_dev/src/whisper_client.py` (new)
+2. `ai_dev/src/server.py` (new endpoint + demo mic controls)
+3. `ai_dev/requirements.txt` (`python-multipart==0.0.9`)
+
+### Endpoint contract (quick)
+
+- Method: `POST /api/transcribe`
+- Content-Type: `multipart/form-data`
+- Form fields:
+   - `file`: audio file (`wav`, `webm`, `m4a`, etc., max 25 MB)
+   - `language`: `en` or `vi` (defaults to `en`)
+
+Success response:
+
+```json
+{
+   "success": true,
+   "text": "I have sharp pain in my lower right abdomen"
+}
+```
+
+Error response examples:
+
+```json
+{
+   "detail": "Missing OPENAI_KEY (or OPENAI_API_KEY)"
+}
+```
+
+```json
+{
+   "detail": "Audio file too large (max 25MB)"
+}
+```
+
+### Validation status
+
+- Curl test passed against local API `http://localhost:8016/api/transcribe`
+- English and Vietnamese requests both returned successful transcription payloads
+
+### Team handoff
+
+Detailed JSON request/response bodies for all active endpoints are documented in:
+
+- `documentation/team/JS_BACKEND_API_BODY_CONTRACT.md`
+
