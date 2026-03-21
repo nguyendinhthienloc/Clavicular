@@ -196,15 +196,9 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
       final dynamic root = response.data;
       if (root is Map<String, dynamic>) {
         final dynamic payload = root['payload'];
-        if (payload is Map<String, dynamic>) {
-          final dynamic dataField = payload['data'];
-          if (dataField is String && dataField.trim().isNotEmpty) {
-            message = dataField;
-          } else if (dataField != null) {
-            message = dataField.toString();
-          }
-        } else if (payload is String && payload.trim().isNotEmpty) {
-          message = payload;
+        final String extracted = _extractDiagnosisText(payload);
+        if (extracted.isNotEmpty) {
+          message = extracted;
         }
       }
 
@@ -218,11 +212,49 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
         'Unexpected error while loading diagnosis review.\n\n$error',
       );
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _isSubmitting = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
     }
+  }
+
+  String _extractDiagnosisText(dynamic payload) {
+    if (payload is String) {
+      return payload.trim();
+    }
+
+    if (payload is! Map<String, dynamic>) {
+      return '';
+    }
+
+    final dynamic textField = payload['text'];
+    if (textField is String && textField.trim().isNotEmpty) {
+      return textField.trim();
+    }
+
+    final dynamic dataField = payload['data'];
+    if (dataField is String && dataField.trim().isNotEmpty) {
+      return dataField.trim();
+    }
+
+    if (dataField is Map<String, dynamic>) {
+      final dynamic nestedText = dataField['text'];
+      if (nestedText is String && nestedText.trim().isNotEmpty) {
+        return nestedText.trim();
+      }
+
+      final dynamic nestedData = dataField['data'];
+      if (nestedData is Map<String, dynamic>) {
+        final dynamic deeplyNestedText = nestedData['text'];
+        if (deeplyNestedText is String && deeplyNestedText.trim().isNotEmpty) {
+          return deeplyNestedText.trim();
+        }
+      }
+    }
+
+    return '';
   }
 
   @override
@@ -263,10 +295,10 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
         ? const Color(0xFFB6C2D1)
         : const Color(0xFF475569);
     final String viewportValue =
-        (widget.selectedViewport == 'chat' ||
-            widget.selectedViewport == 'diagnosis')
+        (widget.selectedViewport == 'Chat' ||
+            widget.selectedViewport == 'Diagnosis')
         ? widget.selectedViewport
-        : 'chat';
+        : 'Chat';
     final List<String> selectedBodyParts = _resolvedSelectedBodyParts;
     final String selectedBodyPartsLabel = selectedBodyParts.isEmpty
         ? 'Select body part in pain'
@@ -321,21 +353,21 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                             children: [
                               Expanded(
                                 child: _ViewportToggleButton(
-                                  label: 'chat',
-                                  selected: viewportValue == 'chat',
+                                  label: 'Chat',
+                                  selected: viewportValue == 'Chat',
                                   isDarkMode: isDarkMode,
                                   gradient: animatedOutlineGradient,
-                                  onTap: () => widget.onViewportChanged('chat'),
+                                  onTap: () => widget.onViewportChanged('Chat'),
                                 ),
                               ),
                               Expanded(
                                 child: _ViewportToggleButton(
-                                  label: 'diagnosis',
-                                  selected: viewportValue == 'diagnosis',
+                                  label: 'Diagnosis',
+                                  selected: viewportValue == 'Diagnosis',
                                   isDarkMode: isDarkMode,
                                   gradient: animatedOutlineGradient,
                                   onTap: () =>
-                                      widget.onViewportChanged('diagnosis'),
+                                      widget.onViewportChanged('Diagnosis'),
                                 ),
                               ),
                             ],
@@ -731,7 +763,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                             padding: EdgeInsets.zero,
                           ),
                           child: Text(
-                            _isSubmitting ? 'sending...' : 'get diagnosis',
+                            _isSubmitting ? 'Sending...' : 'Get diagnosis',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.montserrat(
                               fontSize: 22,
