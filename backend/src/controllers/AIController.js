@@ -33,6 +33,23 @@ class AIController {
 			next(error);
 		}
 	}
+
+	async diagnose(req, res, next) {
+		try {
+			const bodyParts = req.body.bodyParts;
+			const severity = req.body.severity;
+			const painType = req.body.painType;
+			const duration = req.body.duration;
+			const trigger = req.body.trigger;
+			const lat = req.body.lat;
+			const lng = req.body.lng;
+
+			const response = await AIService.diagnose(bodyParts, severity, painType, duration, trigger, lat, lng);
+			return void res.status(response.statusCode).json(response.get()); 
+		} catch (err) {
+			next(err)
+		}
+	}
 }
 
 export default new AIController();

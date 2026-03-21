@@ -1,11 +1,12 @@
 import config from '../config/config.js'
 import ServiceResponse from '../helper/ServiceResponse.js';
 import { GoogleGenAI } from '@google/genai';
+import axios from 'axios';
 const gemini = new GoogleGenAI(config.gemini.APIKey);
 
 class AIService {
 	constructor() {
-		
+		this.locAIBaseURL = config.locAI.baseURL;
 	}
 
 	async sendPrompt(prompt, model = 'gemini-flash-latest') {
@@ -32,6 +33,34 @@ class AIService {
 				"Success",
 				text
 			);
+			return response;
+		} catch (err) {
+			const response = new ServiceResponse(
+				false,
+				502,
+				"Something went wrong",
+				err.toString()
+			);
+			return response;
+		}
+	}
+
+	async diagnose(bodyParts, severity, painType, duration, trigger, lat, lng) {
+		const query = `Body region: ${bodyParts.join(', ')}\nSeverity: ${severity}\nPain type: ${painType}\nDuration: ${duration}\nActivity trigger: ${trigger}`;
+
+		try {
+			const res = await axios.post(`${this.locAIBaseURL}/api/diagnose`, {
+				language: "en",
+				query,
+				lat,
+				lng
+			});
+			const response = new ServiceResponse(
+				true,
+				200,
+				"Success",
+				res.data.data
+			)
 			return response;
 		} catch (err) {
 			const response = new ServiceResponse(

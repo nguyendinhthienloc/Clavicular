@@ -9,4 +9,10 @@ router.all('/send-prompt',
 	AIController.sendPrompt
 );
 
+router.all('/diagnose',
+	ValidatorMiddleware.validateMethods(['POST']),
+	ValidatorMiddleware.validateContentType,
+	AIController.diagnose
+);
+
 export default router;
