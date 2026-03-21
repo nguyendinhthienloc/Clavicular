@@ -5,7 +5,9 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:convert';
+import 'dart:math' as math;
 import 'config/app_config.dart';
 import 'package:flutter_map/flutter_map.dart';
 
@@ -34,18 +36,21 @@ class ViewportChat extends StatefulWidget {
 }
 
 class _ViewportChatState extends State<ViewportChat>
-    with SingleTickerProviderStateMixin {
+  with TickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final List<_ChatMessage> _messages = [];
   late final Dio _dio;
   AnimationController? _gradientController;
+  AnimationController? _micPulseController;
   bool _isTyping = false;
   bool _hasSentFirstMessage = false;
   bool _isLoading = false;
   bool _isLoadingMap = false;
+  bool _isListening = false;
   bool _hasDiagnosis = false;
   int _lastInjectedAssistantVersion = -1;
   List<String> _conditionNames = <String>[];
+  final stt.SpeechToText _speechToText = stt.SpeechToText();
 
   @override
   void initState() {
@@ -56,6 +61,10 @@ class _ViewportChatState extends State<ViewportChat>
       vsync: this,
       duration: const Duration(seconds: 14),
     )..repeat();
+    _micPulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
   }
 
   void _handleTypingState() {
@@ -375,6 +384,99 @@ class _ViewportChatState extends State<ViewportChat>
           _ChatMessage(text: 'Unexpected error: $e', isUser: false),
         );
       });
+    }
+  }
+
+  Future<void> _toggleSpeechToText() async {
+    if (_isListening) {
+      await _stopSpeechToText();
+      return;
+    }
+
+    try {
+      final bool isAvailable = await _speechToText.initialize(
+        onStatus: (String status) {
+          if (status == 'done' || status == 'notListening') {
+            if (mounted) {
+              _micPulseController?.stop();
+              _micPulseController?.value = 0;
+              setState(() {
+                _isListening = false;
+              });
+            }
+          }
+        },
+        onError: (error) {
+          if (!mounted) {
+            return;
+          }
+          _micPulseController?.stop();
+          _micPulseController?.value = 0;
+          setState(() {
+            _isListening = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('STT error: ${error.errorMsg}')),
+          );
+        },
+      );
+
+      if (!isAvailable) {
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Speech recognition is not available.')),
+        );
+        return;
+      }
+
+      setState(() {
+        _isListening = true;
+      });
+      _micPulseController?.repeat(reverse: true);
+
+      await _speechToText.listen(
+        onResult: (result) {
+          if (!mounted) {
+            return;
+          }
+
+          setState(() {
+            _controller.text = result.recognizedWords;
+            _controller.selection = TextSelection.fromPosition(
+              TextPosition(offset: _controller.text.length),
+            );
+            _isTyping = _controller.text.trim().isNotEmpty;
+          });
+        },
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _micPulseController?.stop();
+      _micPulseController?.value = 0;
+      setState(() {
+        _isListening = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not start STT: $error')));
+    }
+  }
+
+  Future<void> _stopSpeechToText() async {
+    try {
+      await _speechToText.stop();
+    } finally {
+      _micPulseController?.stop();
+      _micPulseController?.value = 0;
+      if (mounted) {
+        setState(() {
+          _isListening = false;
+        });
+      }
     }
   }
 
@@ -929,6 +1031,8 @@ class _ViewportChatState extends State<ViewportChat>
 
   @override
   void dispose() {
+    _speechToText.stop();
+    _micPulseController?.dispose();
     _controller.removeListener(_handleTypingState);
     _controller.dispose();
     _gradientController?.dispose();
@@ -958,6 +1062,10 @@ class _ViewportChatState extends State<ViewportChat>
       vsync: this,
       duration: const Duration(seconds: 14),
     )..repeat();
+    _micPulseController ??= AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
 
     final bool isDarkMode = widget.isDarkMode;
     final bool hasMessages = _messages.isNotEmpty;
@@ -997,11 +1105,16 @@ class _ViewportChatState extends State<ViewportChat>
     final Color disabledIconColor = isDarkMode
         ? const Color(0xFF6E6E6E)
         : const Color(0xFF9CA3AF);
+    final String normalizedViewport = widget.selectedViewport
+      .trim()
+      .toLowerCase();
     final String viewportValue =
-        (widget.selectedViewport == 'chat' ||
-            widget.selectedViewport == 'diagnosis')
-        ? widget.selectedViewport
-        : 'chat';
+      (normalizedViewport == 'chat' || normalizedViewport == 'diagnosis')
+      ? normalizedViewport
+      : 'chat';
+    final Color listeningMicColor = isDarkMode
+      ? const Color(0xFF60A5FA)
+      : const Color(0xFF2563EB);
     final List<Color> outlineColors = isDarkMode
         ? const [Color(0xFF60A5FA), Color(0xFF1D4ED8)]
         : const [Color(0xFF93C5FD), Color(0xFF2563EB)];
@@ -1050,7 +1163,7 @@ class _ViewportChatState extends State<ViewportChat>
                                 children: [
                                   Expanded(
                                     child: _ViewportToggleButton(
-                                      label: 'chat',
+                                      label: 'Chat',
                                       selected: viewportValue == 'chat',
                                       isDarkMode: isDarkMode,
                                       gradient: animatedOutlineGradient,
@@ -1060,7 +1173,7 @@ class _ViewportChatState extends State<ViewportChat>
                                   ),
                                   Expanded(
                                     child: _ViewportToggleButton(
-                                      label: 'diagnosis',
+                                      label: 'Diagnosis',
                                       selected: viewportValue == 'diagnosis',
                                       isDarkMode: isDarkMode,
                                       gradient: animatedOutlineGradient,
@@ -1463,6 +1576,82 @@ class _ViewportChatState extends State<ViewportChat>
                                           ),
                                         ),
                                         const SizedBox(width: 16),
+                                        IconButton(
+                                          onPressed: !_isLoading
+                                              ? _toggleSpeechToText
+                                              : null,
+                                          icon: AnimatedBuilder(
+                                            animation: _micPulseController!,
+                                            builder: (BuildContext context, _) {
+                                              final double pulse = _isListening
+                                                  ? _micPulseController!.value
+                                                  : 0;
+                                              final double yOffset = _isListening
+                                                  ? -2.4 *
+                                                        math.sin(
+                                                          pulse *
+                                                              math.pi *
+                                                              2,
+                                                        )
+                                                  : 0;
+                                              final double ringScale =
+                                                  1 + (pulse * 0.26);
+                                              final double ringOpacity =
+                                                  _isListening
+                                                  ? (0.22 - (pulse * 0.16))
+                                                        .clamp(0.0, 1.0)
+                                                  : 0.0;
+                                              final Color micColor = !_isLoading
+                                                  ? (_isListening
+                                                        ? listeningMicColor
+                                                        : controlIconColor)
+                                                  : disabledIconColor;
+
+                                              return SizedBox(
+                                                width: 30,
+                                                height: 30,
+                                                child: Stack(
+                                                  alignment: Alignment.center,
+                                                  children: [
+                                                    if (_isListening)
+                                                      Transform.scale(
+                                                        scale: ringScale,
+                                                        child: Container(
+                                                          width: 24,
+                                                          height: 24,
+                                                          decoration: BoxDecoration(
+                                                            shape:
+                                                                BoxShape.circle,
+                                                            color:
+                                                                listeningMicColor
+                                                                    .withValues(
+                                                                      alpha:
+                                                                          ringOpacity,
+                                                                    ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    Transform.translate(
+                                                      offset: Offset(
+                                                        0,
+                                                        yOffset,
+                                                      ),
+                                                      child: Icon(
+                                                        Icons.mic_rounded,
+                                                        color: micColor,
+                                                        size: 25,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                          tooltip: _isListening
+                                              ? 'Stop voice input'
+                                              : 'Start voice input',
+                                        ),
+                                        const SizedBox(width: 8),
                                         IconButton(
                                           onPressed: _sendMessage,
                                           icon: ShaderMask(

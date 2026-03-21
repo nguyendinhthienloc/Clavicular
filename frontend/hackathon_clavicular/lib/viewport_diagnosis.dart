@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'dart:math' as math;
 import 'config/app_config.dart';
 
 class ViewportDiagnosis extends StatefulWidget {
@@ -27,10 +29,12 @@ class ViewportDiagnosis extends StatefulWidget {
 }
 
 class _ViewportDiagnosisState extends State<ViewportDiagnosis>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final TextEditingController _notesController = TextEditingController();
   late final Dio _dio;
   AnimationController? _gradientController;
+  AnimationController? _micPulseController;
+  final stt.SpeechToText _speechToText = stt.SpeechToText();
 
   String? _selectedSeverity;
   String? _selectedPainType;
@@ -39,6 +43,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
   bool _useCurrentLocation = true;
   bool _isSubmitting = false;
   bool _isLocating = false;
+  bool _isListeningNotes = false;
   double? _lat;
   double? _lng;
   String? _locationStatus;
@@ -73,6 +78,102 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
       vsync: this,
       duration: const Duration(seconds: 14),
     )..repeat();
+    _micPulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+  }
+
+  Future<void> _toggleNotesSpeechToText() async {
+    if (_isListeningNotes) {
+      await _stopNotesSpeechToText();
+      return;
+    }
+
+    try {
+      final bool isAvailable = await _speechToText.initialize(
+        onStatus: (String status) {
+          if (status == 'done' || status == 'notListening') {
+            if (!mounted) {
+              return;
+            }
+            _micPulseController?.stop();
+            _micPulseController?.value = 0;
+            setState(() {
+              _isListeningNotes = false;
+            });
+          }
+        },
+        onError: (error) {
+          if (!mounted) {
+            return;
+          }
+          _micPulseController?.stop();
+          _micPulseController?.value = 0;
+          setState(() {
+            _isListeningNotes = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('STT error: ${error.errorMsg}')),
+          );
+        },
+      );
+
+      if (!isAvailable) {
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Speech recognition is not available.')),
+        );
+        return;
+      }
+
+      setState(() {
+        _isListeningNotes = true;
+      });
+      _micPulseController?.repeat(reverse: true);
+
+      await _speechToText.listen(
+        onResult: (result) {
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _notesController.text = result.recognizedWords;
+            _notesController.selection = TextSelection.fromPosition(
+              TextPosition(offset: _notesController.text.length),
+            );
+          });
+        },
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _micPulseController?.stop();
+      _micPulseController?.value = 0;
+      setState(() {
+        _isListeningNotes = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not start voice notes: $error')),
+      );
+    }
+  }
+
+  Future<void> _stopNotesSpeechToText() async {
+    try {
+      await _speechToText.stop();
+    } finally {
+      _micPulseController?.stop();
+      _micPulseController?.value = 0;
+      if (mounted) {
+        setState(() {
+          _isListeningNotes = false;
+        });
+      }
+    }
   }
 
   Future<bool> _resolveCurrentLocation({bool showLoading = true}) async {
@@ -259,7 +360,9 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
 
   @override
   void dispose() {
+    _speechToText.stop();
     _notesController.dispose();
+    _micPulseController?.dispose();
     _gradientController?.dispose();
     super.dispose();
   }
@@ -270,6 +373,10 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
       vsync: this,
       duration: const Duration(seconds: 14),
     )..repeat();
+    _micPulseController ??= AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
 
     final bool isDarkMode = widget.isDarkMode;
 
@@ -294,11 +401,16 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
     final Color statusColor = isDarkMode
         ? const Color(0xFFB6C2D1)
         : const Color(0xFF475569);
+    final Color listeningMicColor = isDarkMode
+      ? const Color(0xFF60A5FA)
+      : const Color(0xFF2563EB);
+    final String normalizedViewport = widget.selectedViewport
+      .trim()
+      .toLowerCase();
     final String viewportValue =
-        (widget.selectedViewport == 'Chat' ||
-            widget.selectedViewport == 'Diagnosis')
-        ? widget.selectedViewport
-        : 'Chat';
+      (normalizedViewport == 'chat' || normalizedViewport == 'diagnosis')
+      ? normalizedViewport
+      : 'diagnosis';
     final List<String> selectedBodyParts = _resolvedSelectedBodyParts;
     final String selectedBodyPartsLabel = selectedBodyParts.isEmpty
         ? 'Select body part in pain'
@@ -337,49 +449,71 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
               ),
               child: Scaffold(
                 backgroundColor: viewportBackground,
-                body: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-                      child: Align(
-                        alignment: Alignment.topLeft,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            color: composerBackground,
-                            border: Border.all(color: viewportBorder),
+                body: LayoutBuilder(
+                  builder: (BuildContext context, BoxConstraints constraints) {
+                    final bool compactHeight = constraints.maxHeight < 740;
+                    final bool compactWidth = constraints.maxWidth < 430;
+                    final double horizontalPadding = compactWidth ? 12 : 16;
+                    final double fieldGap = compactHeight ? 10 : 12;
+                    final double notesHeight = compactHeight ? 80 : 92;
+                    final double notesOuterRadius = compactHeight ? 20 : 24;
+                    final double notesInnerRadius = compactHeight ? 18.6 : 22.6;
+                    final double submitHeight = compactHeight ? 50 : 56;
+                    final double submitFontSize = compactWidth ? 18 : 22;
+
+                    return Column(
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            horizontalPadding,
+                            compactHeight ? 8 : 10,
+                            horizontalPadding,
+                            8,
                           ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: _ViewportToggleButton(
-                                  label: 'Chat',
-                                  selected: viewportValue == 'Chat',
-                                  isDarkMode: isDarkMode,
-                                  gradient: animatedOutlineGradient,
-                                  onTap: () => widget.onViewportChanged('Chat'),
-                                ),
+                          child: Align(
+                            alignment: Alignment.topLeft,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                color: composerBackground,
+                                border: Border.all(color: viewportBorder),
                               ),
-                              Expanded(
-                                child: _ViewportToggleButton(
-                                  label: 'Diagnosis',
-                                  selected: viewportValue == 'Diagnosis',
-                                  isDarkMode: isDarkMode,
-                                  gradient: animatedOutlineGradient,
-                                  onTap: () =>
-                                      widget.onViewportChanged('Diagnosis'),
-                                ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _ViewportToggleButton(
+                                      label: 'Chat',
+                                      selected: viewportValue == 'chat',
+                                      isDarkMode: isDarkMode,
+                                      gradient: animatedOutlineGradient,
+                                      onTap: () => widget.onViewportChanged('chat'),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: _ViewportToggleButton(
+                                      label: 'Diagnosis',
+                                      selected: viewportValue == 'diagnosis',
+                                      isDarkMode: isDarkMode,
+                                      gradient: animatedOutlineGradient,
+                                      onTap: () =>
+                                          widget.onViewportChanged('diagnosis'),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-                        child: Column(
-                          children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: EdgeInsets.fromLTRB(
+                              horizontalPadding,
+                              compactHeight ? 8 : 10,
+                              horizontalPadding,
+                              compactHeight ? 10 : 12,
+                            ),
+                            child: Column(
+                              children: [
                             DropdownButtonFormField<String>(
                               initialValue: selectedBodyPartsLabel,
                               isExpanded: true,
@@ -426,7 +560,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                               },
                               onChanged: (_) {},
                             ),
-                            const SizedBox(height: 12),
+                            SizedBox(height: fieldGap),
                             DropdownButtonFormField<String>(
                               initialValue: _selectedSeverity,
                               decoration: InputDecoration(
@@ -470,7 +604,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                                 });
                               },
                             ),
-                            const SizedBox(height: 12),
+                            SizedBox(height: fieldGap),
                             DropdownButtonFormField<String>(
                               initialValue: _selectedPainType,
                               decoration: InputDecoration(
@@ -514,7 +648,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                                 });
                               },
                             ),
-                            const SizedBox(height: 12),
+                            SizedBox(height: fieldGap),
                             DropdownButtonFormField<String>(
                               initialValue: _selectedDuration,
                               decoration: InputDecoration(
@@ -558,7 +692,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                                 });
                               },
                             ),
-                            const SizedBox(height: 12),
+                            SizedBox(height: fieldGap),
                             DropdownButtonFormField<String>(
                               initialValue: _selectedActivity,
                               decoration: InputDecoration(
@@ -602,7 +736,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                                 });
                               },
                             ),
-                            const SizedBox(height: 12),
+                            SizedBox(height: fieldGap),
                             Container(
                               width: double.infinity,
                               padding: const EdgeInsets.fromLTRB(
@@ -624,6 +758,8 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                                       Expanded(
                                         child: Text(
                                           'Use current location for nearby clinics',
+                                          maxLines: compactWidth ? 2 : 1,
+                                          overflow: TextOverflow.ellipsis,
                                           style: GoogleFonts.montserrat(
                                             color: inputTextColor,
                                             fontSize: 13,
@@ -686,94 +822,188 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: fieldGap + 4),
                             Container(
                               width: double.infinity,
-                              height: 118,
+                              height: notesHeight,
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(24),
+                                borderRadius: BorderRadius.circular(
+                                  notesOuterRadius,
+                                ),
                                 gradient: animatedOutlineGradient,
                               ),
                               child: Container(
                                 margin: const EdgeInsets.all(1.4),
                                 decoration: BoxDecoration(
                                   color: composerBackground,
-                                  borderRadius: BorderRadius.circular(22.6),
+                                  borderRadius: BorderRadius.circular(
+                                    notesInnerRadius,
+                                  ),
                                 ),
                                 child: Padding(
                                   padding: const EdgeInsets.fromLTRB(
                                     18,
-                                    12,
+                                    10,
                                     14,
                                     10,
                                   ),
-                                  child: Column(
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
                                     children: [
-                                      TextField(
-                                        controller: _notesController,
-                                        maxLines: 1,
-                                        style: GoogleFonts.montserrat(
-                                          color: inputTextColor,
-                                          fontSize: 16,
-                                        ),
-                                        decoration: InputDecoration(
-                                          hintText:
-                                              'Add notes for diagnosis...',
-                                          hintStyle: GoogleFonts.montserrat(
-                                            color: inputHintColor,
+                                      Expanded(
+                                        child: TextField(
+                                          controller: _notesController,
+                                          maxLines: 1,
+                                          textInputAction:
+                                              TextInputAction.done,
+                                          style: GoogleFonts.montserrat(
+                                            color: inputTextColor,
+                                            fontSize: 16,
                                           ),
-                                          border: InputBorder.none,
+                                          decoration: InputDecoration(
+                                            hintText:
+                                                'Add notes for diagnosis...',
+                                            hintStyle: GoogleFonts.montserrat(
+                                              color: inputHintColor,
+                                            ),
+                                            border: InputBorder.none,
+                                          ),
                                         ),
                                       ),
-                                      const Spacer(),
-                                      const Align(
+                                      const SizedBox(width: 8),
+                                      Align(
                                         alignment: Alignment.centerRight,
-                                        child: Icon(Icons.graphic_eq),
+                                        child: IconButton(
+                                          onPressed: _isSubmitting
+                                              ? null
+                                              : _toggleNotesSpeechToText,
+                                          tooltip: _isListeningNotes
+                                              ? 'Stop voice notes'
+                                              : 'Start voice notes',
+                                          icon: AnimatedBuilder(
+                                            animation: _micPulseController!,
+                                            builder: (BuildContext context, _) {
+                                              final double pulse =
+                                                  _isListeningNotes
+                                                  ? _micPulseController!.value
+                                                  : 0;
+                                              final double yOffset =
+                                                  _isListeningNotes
+                                                  ? -2.2 *
+                                                        math.sin(
+                                                          pulse *
+                                                              math.pi *
+                                                              2,
+                                                        )
+                                                  : 0;
+                                              final double ringScale =
+                                                  1 + (pulse * 0.24);
+                                              final double ringOpacity =
+                                                  _isListeningNotes
+                                                  ? (0.2 - (pulse * 0.14))
+                                                        .clamp(0.0, 1.0)
+                                                  : 0.0;
+                                              final Color micColor =
+                                                  _isSubmitting
+                                                  ? inputHintColor
+                                                  : (_isListeningNotes
+                                                        ? listeningMicColor
+                                                        : inputHintColor);
+
+                                              return SizedBox(
+                                                width: 30,
+                                                height: 30,
+                                                child: Stack(
+                                                  alignment: Alignment.center,
+                                                  children: [
+                                                    if (_isListeningNotes)
+                                                      Transform.scale(
+                                                        scale: ringScale,
+                                                        child: Container(
+                                                          width: 24,
+                                                          height: 24,
+                                                          decoration: BoxDecoration(
+                                                            shape:
+                                                                BoxShape.circle,
+                                                            color:
+                                                                listeningMicColor
+                                                                    .withValues(
+                                                                      alpha:
+                                                                          ringOpacity,
+                                                                    ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    Transform.translate(
+                                                      offset: Offset(
+                                                        0,
+                                                        yOffset,
+                                                      ),
+                                                      child: Icon(
+                                                        Icons.mic_rounded,
+                                                        color: micColor,
+                                                        size: 24,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
                               ),
                             ),
-                          ],
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                      child: Container(
-                        width: double.infinity,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          gradient: animatedButtonGradient,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: ElevatedButton(
-                          onPressed: selectedBodyParts.isEmpty
-                              ? null
-                              : _submitDiagnosis,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            foregroundColor: Colors.white,
-                            alignment: Alignment.center,
-                            shape: RoundedRectangleBorder(
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            horizontalPadding,
+                            4,
+                            horizontalPadding,
+                            compactHeight ? 12 : 16,
+                          ),
+                          child: Container(
+                            width: double.infinity,
+                            height: submitHeight,
+                            decoration: BoxDecoration(
+                              gradient: animatedButtonGradient,
                               borderRadius: BorderRadius.circular(14),
                             ),
-                            padding: EdgeInsets.zero,
-                          ),
-                          child: Text(
-                            _isSubmitting ? 'Sending...' : 'Get diagnosis',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.montserrat(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
+                            child: ElevatedButton(
+                              onPressed: selectedBodyParts.isEmpty
+                                  ? null
+                                  : _submitDiagnosis,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                foregroundColor: Colors.white,
+                                alignment: Alignment.center,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                padding: EdgeInsets.zero,
+                              ),
+                              child: Text(
+                                _isSubmitting ? 'Sending...' : 'Get Diagnosis',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.montserrat(
+                                  fontSize: submitFontSize,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                  ],
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
