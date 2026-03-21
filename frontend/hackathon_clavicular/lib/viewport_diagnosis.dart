@@ -32,10 +32,10 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
   late final Dio _dio;
   AnimationController? _gradientController;
 
-  String _selectedSeverity = 'Mild';
-  String _selectedPainType = 'sharp';
-  String _selectedDuration = '< 1 week';
-  String _selectedActivity = 'Rest';
+  String? _selectedSeverity;
+  String? _selectedPainType;
+  String? _selectedDuration;
+  String? _selectedActivity;
   bool _useCurrentLocation = true;
   bool _isSubmitting = false;
   bool _isLocating = false;
@@ -118,7 +118,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
         if (mounted) {
           setState(() {
             _locationStatus =
-                'Location permission denied forever. Enable it in app settings.';
+                'Location permission denied permanently. Enable it in app settings.';
           });
         }
         return false;
@@ -135,8 +135,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
         setState(() {
           _lat = position.latitude;
           _lng = position.longitude;
-          _locationStatus =
-              'Location ready: ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
+          _locationStatus = 'Location ready.';
         });
       } else {
         _lat = position.latitude;
@@ -146,7 +145,8 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
     } catch (_) {
       if (mounted) {
         setState(() {
-          _locationStatus = 'Could not get location. You can still submit without it.';
+          _locationStatus =
+              'Could not get location. You can still submit without it.';
         });
       }
       return false;
@@ -178,10 +178,10 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
             '${AppConfig.apiEndpoint}/ai/diagnose',
             data: <String, dynamic>{
               'bodyParts': bodyParts,
-              'severity': _selectedSeverity,
-              'painType': _selectedPainType,
-              'duration': _selectedDuration,
-              'trigger': _selectedActivity,
+              'severity': _selectedSeverity ?? 'Mild',
+              'painType': _selectedPainType ?? 'sharp',
+              'duration': _selectedDuration ?? '< 1 week',
+              'trigger': _selectedActivity ?? 'Rest',
               'lat': _useCurrentLocation ? _lat : null,
               'lng': _useCurrentLocation ? _lng : null,
             },
@@ -262,15 +262,15 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
     final Color statusColor = isDarkMode
         ? const Color(0xFFB6C2D1)
         : const Color(0xFF475569);
-    final Color dropdownText = isDarkMode
-        ? const Color(0xFFEAF1FF)
-        : Colors.white;
     final String viewportValue =
         (widget.selectedViewport == 'chat' ||
             widget.selectedViewport == 'diagnosis')
         ? widget.selectedViewport
         : 'chat';
     final List<String> selectedBodyParts = _resolvedSelectedBodyParts;
+    final String selectedBodyPartsLabel = selectedBodyParts.isEmpty
+        ? 'Select body part in pain'
+        : selectedBodyParts.join(', ');
     final List<Color> outlineColors = isDarkMode
         ? const [Color(0xFF60A5FA), Color(0xFF1D4ED8)]
         : const [Color(0xFF93C5FD), Color(0xFF2563EB)];
@@ -313,55 +313,44 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                         alignment: Alignment.topLeft,
                         child: Container(
                           decoration: BoxDecoration(
-                            gradient: animatedOutlineGradient,
                             borderRadius: BorderRadius.circular(12),
+                            color: composerBackground,
+                            border: Border.all(color: viewportBorder),
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 2,
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: viewportValue,
-                                iconEnabledColor: dropdownText,
-                                dropdownColor: isDarkMode
-                                    ? const Color(0xFF0E1B38)
-                                    : const Color(0xFF2563EB),
-                                style: GoogleFonts.montserrat(
-                                  color: dropdownText,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 18,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: _ViewportToggleButton(
+                                  label: 'chat',
+                                  selected: viewportValue == 'chat',
+                                  isDarkMode: isDarkMode,
+                                  gradient: animatedOutlineGradient,
+                                  onTap: () => widget.onViewportChanged('chat'),
                                 ),
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'chat',
-                                    child: Text('chat'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'diagnosis',
-                                    child: Text('diagnosis'),
-                                  ),
-                                ],
-                                onChanged: (String? value) {
-                                  if (value == null) return;
-                                  widget.onViewportChanged(value);
-                                },
                               ),
-                            ),
+                              Expanded(
+                                child: _ViewportToggleButton(
+                                  label: 'diagnosis',
+                                  selected: viewportValue == 'diagnosis',
+                                  isDarkMode: isDarkMode,
+                                  gradient: animatedOutlineGradient,
+                                  onTap: () =>
+                                      widget.onViewportChanged('diagnosis'),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ),
                     Expanded(
-                      child: Padding(
+                      child: SingleChildScrollView(
                         padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
                         child: Column(
                           children: [
                             DropdownButtonFormField<String>(
-                              initialValue: selectedBodyParts.isEmpty
-                                  ? 'Nothing selected'
-                                  : selectedBodyParts.join(', '),
+                              initialValue: selectedBodyPartsLabel,
+                              isExpanded: true,
                               decoration: InputDecoration(
                                 filled: true,
                                 fillColor: composerBackground,
@@ -380,21 +369,34 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                               dropdownColor: composerBackground,
                               items: [
                                 DropdownMenuItem(
-                                  value: selectedBodyParts.isEmpty
-                                      ? 'Nothing selected'
-                                      : selectedBodyParts.join(', '),
+                                  value: selectedBodyPartsLabel,
                                   child: Text(
-                                    selectedBodyParts.isEmpty
-                                        ? 'Nothing selected'
-                                        : selectedBodyParts.join(', '),
+                                    selectedBodyPartsLabel,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
+                              selectedItemBuilder: (BuildContext context) {
+                                return <Widget>[
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      selectedBodyPartsLabel,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.montserrat(
+                                        color: inputTextColor,
+                                      ),
+                                    ),
+                                  ),
+                                ];
+                              },
                               onChanged: (_) {},
                             ),
                             const SizedBox(height: 12),
                             DropdownButtonFormField<String>(
-                              value: _selectedSeverity,
+                              initialValue: _selectedSeverity,
                               decoration: InputDecoration(
                                 hintText: 'Select severity',
                                 hintStyle: GoogleFonts.montserrat(
@@ -438,7 +440,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                             ),
                             const SizedBox(height: 12),
                             DropdownButtonFormField<String>(
-                              value: _selectedPainType,
+                              initialValue: _selectedPainType,
                               decoration: InputDecoration(
                                 hintText: 'Select pain type',
                                 hintStyle: GoogleFonts.montserrat(
@@ -482,7 +484,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                             ),
                             const SizedBox(height: 12),
                             DropdownButtonFormField<String>(
-                              value: _selectedDuration,
+                              initialValue: _selectedDuration,
                               decoration: InputDecoration(
                                 hintText: 'Select duration',
                                 hintStyle: GoogleFonts.montserrat(
@@ -526,7 +528,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                             ),
                             const SizedBox(height: 12),
                             DropdownButtonFormField<String>(
-                              value: _selectedActivity,
+                              initialValue: _selectedActivity,
                               decoration: InputDecoration(
                                 hintText: 'Select activity trigger',
                                 hintStyle: GoogleFonts.montserrat(
@@ -571,7 +573,12 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                             const SizedBox(height: 12),
                             Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                              padding: const EdgeInsets.fromLTRB(
+                                12,
+                                10,
+                                12,
+                                10,
+                              ),
                               decoration: BoxDecoration(
                                 color: composerBackground,
                                 borderRadius: BorderRadius.circular(14),
@@ -603,7 +610,11 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                                     ],
                                   ),
                                   const SizedBox(height: 4),
-                                  Row(
+                                  Wrap(
+                                    spacing: 10,
+                                    runSpacing: 6,
+                                    crossAxisAlignment:
+                                        WrapCrossAlignment.center,
                                     children: [
                                       TextButton.icon(
                                         onPressed: _isLocating
@@ -613,27 +624,19 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                                             ? const SizedBox(
                                                 width: 14,
                                                 height: 14,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                ),
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                    ),
                                               )
                                             : const Icon(Icons.my_location),
                                         label: Text(
-                                          _isLocating ? 'Locating...' : 'Locate me',
+                                          _isLocating
+                                              ? 'Locating...'
+                                              : 'Show location',
                                           style: GoogleFonts.montserrat(),
                                         ),
                                       ),
-                                      if (_lat != null && _lng != null)
-                                        Expanded(
-                                          child: Text(
-                                            '${_lat!.toStringAsFixed(5)}, ${_lng!.toStringAsFixed(5)}',
-                                            textAlign: TextAlign.right,
-                                            style: GoogleFonts.robotoMono(
-                                              color: statusColor,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ),
                                     ],
                                   ),
                                   if (_locationStatus != null &&
