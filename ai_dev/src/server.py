@@ -35,6 +35,9 @@ class DiagnoseRequest(BaseModel):
     language: Literal["en", "vi"] = "en"
     lat: Optional[float] = None
     lng: Optional[float] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    coordinates: Optional[Dict[str, float]] = None
 
 
 class AnalyzeRequest(BaseModel):
@@ -80,6 +83,19 @@ def _parse_cors_origins(raw: Optional[str]) -> list[str]:
     if not raw or raw.strip() == "*":
         return ["*"]
     return [part.strip() for part in raw.split(",") if part.strip()]
+
+
+def _resolve_coords(payload: DiagnoseRequest) -> tuple[Optional[float], Optional[float]]:
+    lat = payload.lat if payload.lat is not None else payload.latitude
+    lng = payload.lng if payload.lng is not None else payload.longitude
+
+    if payload.coordinates:
+        if lat is None:
+            lat = payload.coordinates.get("lat", payload.coordinates.get("latitude"))
+        if lng is None:
+            lng = payload.coordinates.get("lng", payload.coordinates.get("longitude"))
+
+    return lat, lng
 
 
 MUSCLE_MAP = {
@@ -205,6 +221,10 @@ def demo() -> str:
             <option value='en'>en</option>
             <option value='vi'>vi</option>
         </select>
+        <label>Location (optional for nearby clinics)</label>
+        <input id='lat' type='number' step='any' placeholder='Latitude' />
+        <input id='lng' type='number' step='any' placeholder='Longitude' />
+        <button onclick='useMyLocation()'>Use My Location</button>
         <button onclick='diagnoseTest()'>Test /api/diagnose</button>
 
         <hr />
@@ -242,7 +262,41 @@ def demo() -> str:
             function diagnoseTest() {
                 const user_message = document.getElementById('diagMsg').value;
                 const language = document.getElementById('lang').value;
-                call('/api/diagnose', { user_message, language });
+                const latRaw = document.getElementById('lat').value.trim();
+                const lngRaw = document.getElementById('lng').value.trim();
+                const payload = { user_message, language };
+                if (latRaw && lngRaw) {
+                    payload.lat = Number(latRaw);
+                    payload.lng = Number(lngRaw);
+                }
+                call('/api/diagnose', payload);
+            }
+            function useMyLocation() {
+                if (!navigator.geolocation) {
+                    out.textContent = JSON.stringify({ error: 'Geolocation is not supported by this browser.' }, null, 2);
+                    return;
+                }
+                out.textContent = JSON.stringify({ status: 'Requesting geolocation permission...' }, null, 2);
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        document.getElementById('lat').value = String(position.coords.latitude);
+                        document.getElementById('lng').value = String(position.coords.longitude);
+                        out.textContent = JSON.stringify({
+                            status: 'Location captured',
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude,
+                            accuracy_meters: position.coords.accuracy
+                        }, null, 2);
+                    },
+                    (err) => {
+                        out.textContent = JSON.stringify({
+                            error: 'Unable to get location',
+                            code: err.code,
+                            message: err.message
+                        }, null, 2);
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+                );
             }
             function sourcesTest() {
                 const query = document.getElementById('srcQuery').value;
@@ -283,12 +337,13 @@ def diagnose(payload: DiagnoseRequest) -> Dict[str, Any]:
     diagnosis = call_diagnosis(openrouter_key, user_message, payload.language)
 
     clinics = []
-    if payload.lat is not None and payload.lng is not None:
+    lat, lng = _resolve_coords(payload)
+    if lat is not None and lng is not None:
         top_condition = diagnosis.get("conditions", [{}])[0].get("name", "")
         foursquare_key = get_env("FOURSQUARE_API_KEY") or get_env("GOOGLE_PLACES_KEY")
         clinics = find_nearby_clinics(
-            lat=payload.lat,
-            lng=payload.lng,
+            lat=lat,
+            lng=lng,
             condition_name=top_condition,
             foursquare_key=foursquare_key,
         )

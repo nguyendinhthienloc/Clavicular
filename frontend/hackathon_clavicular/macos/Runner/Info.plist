@@ -26,6 +26,8 @@
 	<string>$(PRODUCT_COPYRIGHT)</string>
 	<key>NSMainNibFile</key>
 	<string>MainMenu</string>
+	<key>NSLocationUsageDescription</key>
+	<string>BodyCheck uses your location to find nearby clinics after diagnosis.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

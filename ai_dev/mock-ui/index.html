@@ -297,9 +297,10 @@ Other: left arm pain</textarea>
           <input id="lng" type="number" step="any" placeholder="Longitude e.g. 106.7228" value="106.7228" />
         </div>
         <div class="chips" aria-label="location presets">
-          <button class="chip" type="button" id="setVngBtn">📍 VNG District 7</button>
+          <button class="chip" type="button" id="setVngBtn">VNG District 7</button>
+          <button class="chip" type="button" id="useGeoBtn">Use My Location</button>
         </div>
-        <p class="helper">Default location: VNG District 7 (10.7295, 106.7228) - Check nearby clinics after diagnosis</p>
+        <p class="helper">Use "My Location" to auto-fill coordinates for nearest clinic search.</p>
       </div>
 
       <div class="button-row">
@@ -611,6 +612,47 @@ Other: left arm pain</textarea>
         coordinates: { lat: 10.7295, lng: 106.7228 },
         hint: 'Location set. Run diagnosis to find nearby clinics.'
       }, null, 2);
+    };
+
+    document.getElementById('useGeoBtn').onclick = () => {
+      if (!navigator.geolocation) {
+        output.textContent = JSON.stringify({
+          error: 'Geolocation is not supported in this browser.'
+        }, null, 2);
+        return;
+      }
+
+      output.textContent = JSON.stringify({
+        status: 'Requesting browser geolocation permission...'
+      }, null, 2);
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          document.getElementById('lat').value = String(lat);
+          document.getElementById('lng').value = String(lng);
+          output.textContent = JSON.stringify({
+            status: 'Location captured',
+            coordinates: { lat, lng },
+            accuracy_meters: position.coords.accuracy,
+            hint: 'Run diagnosis to find nearby clinics.'
+          }, null, 2);
+        },
+        (err) => {
+          output.textContent = JSON.stringify({
+            error: 'Unable to get location',
+            code: err.code,
+            message: err.message,
+            hint: 'Allow location permission, or enter lat/lng manually.'
+          }, null, 2);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
+        }
+      );
     };
 
     document.getElementById('diagnoseBtn').onclick = () => {

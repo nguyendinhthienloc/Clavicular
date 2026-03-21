@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'config/app_config.dart';
 
@@ -35,7 +36,12 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
   String _selectedPainType = 'sharp';
   String _selectedDuration = '< 1 week';
   String _selectedActivity = 'Rest';
+  bool _useCurrentLocation = true;
   bool _isSubmitting = false;
+  bool _isLocating = false;
+  double? _lat;
+  double? _lng;
+  String? _locationStatus;
 
   List<String> get _resolvedSelectedBodyParts {
     final List<String> selectedBodyParts =
@@ -69,6 +75,89 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
     )..repeat();
   }
 
+  Future<bool> _resolveCurrentLocation({bool showLoading = true}) async {
+    if (_isLocating) {
+      return _lat != null && _lng != null;
+    }
+
+    if (showLoading && mounted) {
+      setState(() {
+        _isLocating = true;
+        _locationStatus = 'Detecting location...';
+      });
+    } else {
+      _isLocating = true;
+    }
+
+    try {
+      final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          setState(() {
+            _locationStatus = 'Location service is disabled.';
+          });
+        }
+        return false;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied) {
+        if (mounted) {
+          setState(() {
+            _locationStatus = 'Location permission denied.';
+          });
+        }
+        return false;
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          setState(() {
+            _locationStatus =
+                'Location permission denied forever. Enable it in app settings.';
+          });
+        }
+        return false;
+      }
+
+      final Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+
+      if (mounted) {
+        setState(() {
+          _lat = position.latitude;
+          _lng = position.longitude;
+          _locationStatus =
+              'Location ready: ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
+        });
+      } else {
+        _lat = position.latitude;
+        _lng = position.longitude;
+      }
+      return true;
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _locationStatus = 'Could not get location. You can still submit without it.';
+        });
+      }
+      return false;
+    } finally {
+      _isLocating = false;
+      if (showLoading && mounted) {
+        setState(() {});
+      }
+    }
+  }
+
   Future<void> _submitDiagnosis() async {
     final List<String> bodyParts = _resolvedSelectedBodyParts;
     if (_isSubmitting || bodyParts.isEmpty) {
@@ -80,6 +169,10 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
     });
 
     try {
+      if (_useCurrentLocation) {
+        await _resolveCurrentLocation(showLoading: false);
+      }
+
       final Response<dynamic> response = await _dio
           .post<dynamic>(
             '${AppConfig.apiEndpoint}/ai/diagnose',
@@ -89,8 +182,8 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
               'painType': _selectedPainType,
               'duration': _selectedDuration,
               'trigger': _selectedActivity,
-              'lat': null,
-              'lng': null,
+              'lat': _useCurrentLocation ? _lat : null,
+              'lng': _useCurrentLocation ? _lng : null,
             },
             options: Options(
               receiveTimeout: const Duration(seconds: 30),
@@ -166,6 +259,9 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
     final Color inputHintColor = isDarkMode
         ? const Color(0xFF9C9C9C)
         : const Color(0xFF6B7280);
+    final Color statusColor = isDarkMode
+        ? const Color(0xFFB6C2D1)
+        : const Color(0xFF475569);
     final Color dropdownText = isDarkMode
         ? const Color(0xFFEAF1FF)
         : Colors.white;
@@ -471,6 +567,89 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                                   _selectedActivity = value;
                                 });
                               },
+                            ),
+                            const SizedBox(height: 12),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                              decoration: BoxDecoration(
+                                color: composerBackground,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: composerBorder),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          'Use current location for nearby clinics',
+                                          style: GoogleFonts.montserrat(
+                                            color: inputTextColor,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                      Switch(
+                                        value: _useCurrentLocation,
+                                        onChanged: (bool value) {
+                                          setState(() {
+                                            _useCurrentLocation = value;
+                                          });
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      TextButton.icon(
+                                        onPressed: _isLocating
+                                            ? null
+                                            : () => _resolveCurrentLocation(),
+                                        icon: _isLocating
+                                            ? const SizedBox(
+                                                width: 14,
+                                                height: 14,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                ),
+                                              )
+                                            : const Icon(Icons.my_location),
+                                        label: Text(
+                                          _isLocating ? 'Locating...' : 'Locate me',
+                                          style: GoogleFonts.montserrat(),
+                                        ),
+                                      ),
+                                      if (_lat != null && _lng != null)
+                                        Expanded(
+                                          child: Text(
+                                            '${_lat!.toStringAsFixed(5)}, ${_lng!.toStringAsFixed(5)}',
+                                            textAlign: TextAlign.right,
+                                            style: GoogleFonts.robotoMono(
+                                              color: statusColor,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  if (_locationStatus != null &&
+                                      _locationStatus!.trim().isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: Text(
+                                        _locationStatus!,
+                                        style: GoogleFonts.montserrat(
+                                          color: statusColor,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
                             const SizedBox(height: 16),
                             Container(
