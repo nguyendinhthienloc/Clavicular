@@ -23,7 +23,6 @@ class _ViewportChatState extends State<ViewportChat> {
   late final Dio _dio;
   bool _isTyping = false;
   bool _hasSentFirstMessage = false;
-  bool _isDarkMode = true;
   bool _isLoading = false;
 
   @override
@@ -63,7 +62,7 @@ class _ViewportChatState extends State<ViewportChat> {
     try {
       final Response<dynamic> response = await _dio
           .post<Map<String, dynamic>>(
-            AppConfig.aiApiTunnel,
+            AppConfig.aiApiTunnelValue,
             data: <String, dynamic>{'prompt': text},
             options: Options(
               receiveTimeout: const Duration(seconds: 30),
@@ -92,9 +91,7 @@ class _ViewportChatState extends State<ViewportChat> {
               assistantMessage = dataField;
             } else if (dataField is Map<String, dynamic>) {
               // If data is a map, try to find text in it
-              assistantMessage =
-                  dataField['data'] ??
-                  '';
+              assistantMessage = dataField['data'] ?? '';
             } else if (dataField != null) {
               assistantMessage = dataField.toString();
             }
@@ -221,32 +218,6 @@ class _ViewportChatState extends State<ViewportChat> {
           backgroundColor: viewportBackground,
           body: Column(
             children: [
-              SafeArea(
-                bottom: false,
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 8, right: 12),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isDarkMode
-                              ? Icons.dark_mode_outlined
-                              : Icons.light_mode_outlined,
-                          color: controlIconColor,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 6),
-                        Switch(
-                          value: isDarkMode,
-                          onChanged: widget.onThemeChanged,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
               Expanded(
                 child: Stack(
                   children: [
@@ -319,11 +290,11 @@ class _ViewportChatState extends State<ViewportChat> {
                         child: AnimatedSlide(
                           duration: const Duration(milliseconds: 450),
                           curve: Curves.easeInOut,
-                            offset: Offset(
-                              0.0,
-                              _hasSentFirstMessage
-                                  ? -1.2
-                                  : _isTyping
+                          offset: Offset(
+                            0.0,
+                            _hasSentFirstMessage
+                                ? -1.2
+                                : _isTyping
                                 ? -0.25
                                 : 0.0,
                           ),

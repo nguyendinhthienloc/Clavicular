@@ -3,7 +3,7 @@ import 'package:hackathon_clavicular/config/app_config.dart';
 import 'model_picker_screen.dart';
 
 void main() async {
-  await AppConfig.init();
+  await AppConfig.initSingleton();
   runApp(const MyApp());
 }
 
