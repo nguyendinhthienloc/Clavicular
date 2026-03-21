@@ -28,7 +28,7 @@ frontend/hackathon_clavicular/.pub/
 .vagrant/
 .sconsign.dblite
 .svn/
-
+frontend/hackathon_clavicular/.env
 frontend/hackathon_clavicular/migrate_working_dir/
 
 *.swp

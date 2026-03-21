@@ -8,6 +8,7 @@ class MainScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black45,
       body: Row(
         children: [
           Container(
@@ -38,7 +39,7 @@ class MainScreen extends StatelessWidget {
                 children: [
                   Expanded(child: const ViewportModel()),
                   const SizedBox(width: 16),
-                  Expanded(child: const ViewportChat()),
+                  Expanded(child: ViewportChat(isDarkMode: true, onThemeChanged: (bool value) {  },)),
                 ],
               ),
             ),
