@@ -142,6 +142,13 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
     // Hook to actual filtering when backend support is added.
   }
 
+  String get _currentModelAsset {
+    if (_selectedLayer.toLowerCase() == 'bone') {
+      return 'assets/skele.glb';
+    }
+    return 'assets/my_model.glb';
+  }
+
   @override
   Widget build(BuildContext context) {
     _gradientController ??= AnimationController(
@@ -246,6 +253,7 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                                   ),
                                   child: ThreeModelView(
                                     isDarkMode: isDarkMode,
+                                    modelAssetPath: _currentModelAsset,
                                     onSelectionChanged:
                                         (List<String>? partNames) {
                                       final List<String> resolvedParts =

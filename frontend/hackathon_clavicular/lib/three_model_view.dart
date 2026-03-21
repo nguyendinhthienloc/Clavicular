@@ -11,6 +11,7 @@ class ThreeModelView extends StatefulWidget {
     this.onSelectionChanged,
     this.onPartSelected,
     required this.isDarkMode,
+    required this.modelAssetPath,
   }) : assert(
          onSelectionChanged != null || onPartSelected != null,
          'Provide onSelectionChanged or onPartSelected',
@@ -19,6 +20,7 @@ class ThreeModelView extends StatefulWidget {
   final ValueChanged<List<String>?>? onSelectionChanged;
   final ValueChanged<String>? onPartSelected;
   final bool isDarkMode;
+  final String modelAssetPath;
 
   @override
   State<ThreeModelView> createState() => _ThreeModelViewState();
@@ -30,10 +32,12 @@ class _ThreeModelViewState extends State<ThreeModelView> {
   late final String _viewType;
   html.IFrameElement? _iframe;
   StreamSubscription<html.MessageEvent>? _messageSub;
+  late String _currentAssetPath;
 
   @override
   void initState() {
     super.initState();
+    _currentAssetPath = widget.modelAssetPath;
     _viewType = 'three-model-picker-iframe-${_viewTypeCounter++}';
     _registerViewFactory();
 
@@ -94,9 +98,10 @@ class _ThreeModelViewState extends State<ThreeModelView> {
 
   void _registerViewFactory() {
     final bool initialDarkMode = widget.isDarkMode;
+    final String initialAssetPath = _currentAssetPath;
 
     ui_web.platformViewRegistry.registerViewFactory(_viewType, (int viewId) {
-      final assetUrl = ui_web.assetManager.getAssetUrl('assets/my_model.glb');
+      final assetUrl = ui_web.assetManager.getAssetUrl(initialAssetPath);
 
       final iframe = html.IFrameElement()
         ..src = _buildIframeSrc(assetUrl, initialDarkMode)
@@ -139,6 +144,20 @@ class _ThreeModelViewState extends State<ThreeModelView> {
     if (oldWidget.isDarkMode != widget.isDarkMode) {
       _postThemeMode(widget.isDarkMode);
     }
+    if (oldWidget.modelAssetPath != widget.modelAssetPath) {
+      _currentAssetPath = widget.modelAssetPath;
+      _updateModelAsset();
+    }
+  }
+
+  void _updateModelAsset() {
+    final html.IFrameElement? iframe = _iframe;
+    if (iframe == null) {
+      return;
+    }
+
+    final String assetUrl = ui_web.assetManager.getAssetUrl(_currentAssetPath);
+    iframe.src = _buildIframeSrc(assetUrl, widget.isDarkMode);
   }
 
   @override
