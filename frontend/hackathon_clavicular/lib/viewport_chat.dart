@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'config/app_config.dart';
 
 class ViewportChat extends StatefulWidget {
@@ -365,12 +366,60 @@ class _ViewportChatState extends State<ViewportChat>
                                       borderRadius: BorderRadius.circular(14),
                                       border: Border.all(color: bubbleBorder),
                                     ),
-                                    child: Text(
-                                      message.text,
-                                      style: GoogleFonts.montserrat(
-                                        color: bodyTextColor,
-                                      ),
-                                    ),
+                                    child: message.isUser
+                                        ? Text(
+                                            message.text,
+                                            style: GoogleFonts.montserrat(
+                                              color: bodyTextColor,
+                                            ),
+                                          )
+                                        : MarkdownBody(
+                                            data: message.text,
+                                            selectable: true,
+                                            styleSheet: MarkdownStyleSheet(
+                                              p: GoogleFonts.montserrat(
+                                                color: bodyTextColor,
+                                                fontSize: 14,
+                                              ),
+                                              h1: GoogleFonts.montserrat(
+                                                color: bodyTextColor,
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                              h2: GoogleFonts.montserrat(
+                                                color: bodyTextColor,
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                              h3: GoogleFonts.montserrat(
+                                                color: bodyTextColor,
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                              listBullet:
+                                                  GoogleFonts.montserrat(
+                                                    color: bodyTextColor,
+                                                  ),
+                                              code: GoogleFonts.robotoMono(
+                                                color: bodyTextColor,
+                                                fontSize: 13,
+                                              ),
+                                              codeblockDecoration:
+                                                  BoxDecoration(
+                                                    color: isDarkMode
+                                                        ? const Color(
+                                                            0xFF1B1B1B,
+                                                          )
+                                                        : const Color(
+                                                            0xFFF1F5F9,
+                                                          ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                  ),
+                                            ),
+                                          ),
                                   ),
                                 );
                               },
