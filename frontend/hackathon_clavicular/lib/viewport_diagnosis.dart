@@ -706,37 +706,33 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                     ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                      child: Center(
-                        child: Container(
-                          width: 280,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            gradient: animatedButtonGradient,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: ElevatedButton(
-                            onPressed: selectedBodyParts.isEmpty
-                                ? null
-                                : _submitDiagnosis,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              foregroundColor: Colors.white,
-                              alignment: Alignment.center,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              padding: EdgeInsets.zero,
+                      child: Container(
+                        width: double.infinity,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          gradient: animatedButtonGradient,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: ElevatedButton(
+                          onPressed: selectedBodyParts.isEmpty
+                              ? null
+                              : _submitDiagnosis,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            alignment: Alignment.center,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                            child: Center(
-                              child: Text(
-                                _isSubmitting ? 'sending...' : 'get diagnosis',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.montserrat(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
+                            padding: EdgeInsets.zero,
+                          ),
+                          child: Text(
+                            _isSubmitting ? 'sending...' : 'get diagnosis',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.montserrat(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),

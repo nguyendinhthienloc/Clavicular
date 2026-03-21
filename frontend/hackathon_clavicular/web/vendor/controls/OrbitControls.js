@@ -16,7 +16,7 @@ import {
 //
 //    Orbit - left mouse / touch: one-finger move
 //    Zoom - middle mouse, or mousewheel / touch: two-finger spread or squish
-//    Pan - right mouse, or left mouse + ctrl/meta/shiftKey, or arrow keys / touch: two-finger move
+//    Pan - right mouse, or left mouse + ctrl/meta, or arrow keys / touch: two-finger move
 
 const _changeEvent = { type: 'change' };
 const _startEvent = { type: 'start' };
@@ -761,7 +761,7 @@ class OrbitControls extends EventDispatcher {
 
 				case scope.keys.UP:
 
-					if ( event.ctrlKey || event.metaKey || event.shiftKey ) {
+					if ( event.ctrlKey || event.metaKey ) {
 
 						rotateUp( 2 * Math.PI * scope.rotateSpeed / scope.domElement.clientHeight );
 
@@ -776,7 +776,7 @@ class OrbitControls extends EventDispatcher {
 
 				case scope.keys.BOTTOM:
 
-					if ( event.ctrlKey || event.metaKey || event.shiftKey ) {
+					if ( event.ctrlKey || event.metaKey ) {
 
 						rotateUp( - 2 * Math.PI * scope.rotateSpeed / scope.domElement.clientHeight );
 
@@ -791,7 +791,7 @@ class OrbitControls extends EventDispatcher {
 
 				case scope.keys.LEFT:
 
-					if ( event.ctrlKey || event.metaKey || event.shiftKey ) {
+					if ( event.ctrlKey || event.metaKey ) {
 
 						rotateLeft( 2 * Math.PI * scope.rotateSpeed / scope.domElement.clientHeight );
 
@@ -806,7 +806,7 @@ class OrbitControls extends EventDispatcher {
 
 				case scope.keys.RIGHT:
 
-					if ( event.ctrlKey || event.metaKey || event.shiftKey ) {
+					if ( event.ctrlKey || event.metaKey ) {
 
 						rotateLeft( - 2 * Math.PI * scope.rotateSpeed / scope.domElement.clientHeight );
 
@@ -1117,7 +1117,7 @@ class OrbitControls extends EventDispatcher {
 
 				case MOUSE.ROTATE:
 
-					if ( event.ctrlKey || event.metaKey || event.shiftKey ) {
+					if ( event.ctrlKey || event.metaKey ) {
 
 						if ( scope.enablePan === false ) return;
 
@@ -1139,7 +1139,7 @@ class OrbitControls extends EventDispatcher {
 
 				case MOUSE.PAN:
 
-					if ( event.ctrlKey || event.metaKey || event.shiftKey ) {
+					if ( event.ctrlKey || event.metaKey ) {
 
 						if ( scope.enableRotate === false ) return;
 

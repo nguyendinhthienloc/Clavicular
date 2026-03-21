@@ -37,8 +37,7 @@
         background: transparent;
       }
 
-      #status,
-      #instructions {
+      #status {
         position: absolute;
         top: 12px;
         z-index: 10;
@@ -56,28 +55,6 @@
         left: 12px;
       }
 
-      #instructions {
-        right: 12px;
-        text-align: right;
-      }
-
-      #instructions .instructions-title {
-        margin: 0 0 8px 0;
-        font-size: 18px;
-        font-weight: 800;
-        line-height: 1.2;
-      }
-
-      #instructions .instruction-line {
-        margin: 0;
-        line-height: 1.3;
-        white-space: normal;
-      }
-
-      #instructions .instruction-line + .instruction-line {
-        margin-top: 2px;
-      }
-
       canvas {
         display: block;
       }
@@ -86,18 +63,10 @@
   <body>
     <div id="app">
       <div id="status">Booting viewer...</div>
-      <div id="instructions">
-        <div class="instructions-title">Controls guide:</div>
-        <div class="instruction-line">Right click + scroll - Move around</div>
-        <div class="instruction-line">Left click - Select single</div>
-        <div class="instruction-line">Shift + left click - Select multiple</div>
-        <div class="instruction-line">Space - Paint</div>
-      </div>
     </div>
 
     <script>
       const statusEl = document.getElementById('status');
-      const instructionsEl = document.getElementById('instructions');
       const container = document.getElementById('app');
       let renderer = null;
       let scene = null;
@@ -158,10 +127,6 @@
           ? 'rgba(21, 21, 21, 0.8)'
           : 'rgba(255, 255, 255, 0.95)';
         statusEl.style.color = isDark ? '#f5f5f5' : '#1f2937';
-        instructionsEl.style.background = isDark
-          ? 'rgba(21, 21, 21, 0.8)'
-          : 'rgba(255, 255, 255, 0.95)';
-        instructionsEl.style.color = isDark ? '#f5f5f5' : '#1f2937';
 
         if (scene && THREERef) {
           scene.background = new THREERef.Color(isDark ? 0x1f1f1f : 0xf4f6f8);
@@ -241,6 +206,32 @@
 
           const controls = new OrbitControls(camera, renderer.domElement);
           controls.enableDamping = true;
+          controls.autoRotate = false;
+          controls.autoRotateSpeed = 2;
+
+          const AUTO_ROTATE_DELAY_MS = 500;
+          let autoRotateTimeoutId = null;
+
+          function pauseAutoRotate() {
+            if (autoRotateTimeoutId !== null) {
+              clearTimeout(autoRotateTimeoutId);
+              autoRotateTimeoutId = null;
+            }
+            controls.autoRotate = false;
+          }
+
+          function resumeAutoRotateSoon() {
+            if (autoRotateTimeoutId !== null) {
+              clearTimeout(autoRotateTimeoutId);
+            }
+            autoRotateTimeoutId = window.setTimeout(() => {
+              controls.autoRotate = true;
+            }, AUTO_ROTATE_DELAY_MS);
+          }
+
+          controls.addEventListener('start', pauseAutoRotate);
+          controls.addEventListener('end', resumeAutoRotateSoon);
+          resumeAutoRotateSoon();
 
           ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
           scene.add(ambientLight);
@@ -503,8 +494,33 @@
             }
           }
 
-          function onClick(event) {
-            updatePointerFromEvent(event);
+          function handleSelectionEvent(event) {
+            if (
+              event.type !== 'touchstart' &&
+              event.pointerType !== 'touch' &&
+              event.button !== undefined &&
+              event.button !== 0
+            ) {
+              return;
+            }
+
+            let clientX = event.clientX;
+            let clientY = event.clientY;
+
+            if (
+              (clientX === undefined || clientY === undefined) &&
+              event.touches &&
+              event.touches.length > 0
+            ) {
+              clientX = event.touches[0].clientX;
+              clientY = event.touches[0].clientY;
+            }
+
+            if (clientX === undefined || clientY === undefined) {
+              return;
+            }
+
+            updatePointerFromEvent({ clientX, clientY });
 
             raycaster.setFromCamera(mouse, camera);
             const hits = raycaster.intersectObjects(pickableMeshes, true);
@@ -533,7 +549,58 @@
             notifySelection(hit);
           }
 
-          renderer.domElement.addEventListener('click', onClick);
+          const selectionEventName = window.PointerEvent ? 'pointerdown' : 'mousedown';
+          renderer.domElement.addEventListener(selectionEventName, handleSelectionEvent);
+          if (!window.PointerEvent) {
+            renderer.domElement.addEventListener('touchstart', handleSelectionEvent);
+          }
+
+          const handlePointerSettle = () => {
+            resumeAutoRotateSoon();
+          };
+
+          if (window.PointerEvent) {
+            renderer.domElement.addEventListener(
+              'pointerdown',
+              () => {
+                pauseAutoRotate();
+              },
+              { passive: true }
+            );
+            renderer.domElement.addEventListener('pointerup', handlePointerSettle, {
+              passive: true,
+            });
+            renderer.domElement.addEventListener('pointerleave', handlePointerSettle, {
+              passive: true,
+            });
+          } else {
+            renderer.domElement.addEventListener(
+              'mousedown',
+              () => {
+                pauseAutoRotate();
+              },
+              { passive: true }
+            );
+            renderer.domElement.addEventListener('mouseup', handlePointerSettle, {
+              passive: true,
+            });
+            renderer.domElement.addEventListener('mouseleave', handlePointerSettle, {
+              passive: true,
+            });
+            renderer.domElement.addEventListener(
+              'touchstart',
+              () => {
+                pauseAutoRotate();
+              },
+              { passive: true }
+            );
+            renderer.domElement.addEventListener('touchend', handlePointerSettle, {
+              passive: true,
+            });
+            renderer.domElement.addEventListener('touchcancel', handlePointerSettle, {
+              passive: true,
+            });
+          }
 
           function onResize() {
             const width = container.clientWidth;
