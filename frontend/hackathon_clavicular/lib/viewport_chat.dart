@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'config/app_config.dart';
 
 class ViewportChat extends StatefulWidget {
@@ -58,6 +59,19 @@ class _ViewportChatState extends State<ViewportChat>
         _isTyping = typing;
       });
     }
+  }
+
+  Future<void> _openLink(String? href) async {
+    if (href == null || href.trim().isEmpty) {
+      return;
+    }
+
+    final Uri? uri = Uri.tryParse(href.trim());
+    if (uri == null) {
+      return;
+    }
+
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   Future<void> _fetchSourcesFromChat() async {
@@ -162,6 +176,7 @@ class _ViewportChatState extends State<ViewportChat>
 
     final List<String> renderedItems = <String>[];
     final Set<String> seenKeys = <String>{};
+
     for (final dynamic item in data) {
       if (item is Map) {
         final String articleLine = _buildSourceItemLine(item);
@@ -174,9 +189,11 @@ class _ViewportChatState extends State<ViewportChat>
         final dynamic urlValue = item['url'];
         final String uniqueKey =
             '${idValue ?? ''}|${titleValue ?? ''}|${urlValue ?? ''}';
+
         if (seenKeys.contains(uniqueKey)) {
           continue;
         }
+
         seenKeys.add(uniqueKey);
         renderedItems.add(articleLine);
       }
@@ -197,7 +214,8 @@ class _ViewportChatState extends State<ViewportChat>
       return '';
     }
 
-    return '- $title - $url';
+    final String safeTitle = title.replaceAll('[', r'\[').replaceAll(']', r'\]');
+    return '- [$safeTitle]($url)';
   }
 
   Future<void> _sendMessage() async {
@@ -239,21 +257,18 @@ class _ViewportChatState extends State<ViewportChat>
             final Map<String, dynamic> responseData =
                 response.data as Map<String, dynamic>;
 
-            // Extract from data field first
             final dynamic dataField = responseData['payload'];
             String assistantMessage = '';
 
             if (dataField is String) {
               assistantMessage = dataField;
             } else if (dataField is Map<String, dynamic>) {
-              // If data is a map, try to find text in it
               assistantMessage = dataField['data'] ?? '';
             } else if (dataField != null) {
               assistantMessage = dataField.toString();
             }
 
             if (assistantMessage.isEmpty) {
-              // If still empty, show what was actually received
               _messages.add(
                 _ChatMessage(
                   text: 'Empty response - received: ${responseData.toString()}',
@@ -504,8 +519,10 @@ class _ViewportChatState extends State<ViewportChat>
                                         ),
                                       );
                                     }
+
                                     final _ChatMessage message =
                                         _messages[index];
+
                                     return Align(
                                       alignment: message.isUser
                                           ? Alignment.centerRight
@@ -542,10 +559,23 @@ class _ViewportChatState extends State<ViewportChat>
                                             : MarkdownBody(
                                                 data: message.text,
                                                 selectable: true,
+                                                onTapLink: (
+                                                  String text,
+                                                  String? href,
+                                                  String title,
+                                                ) {
+                                                  _openLink(href);
+                                                },
                                                 styleSheet: MarkdownStyleSheet(
                                                   p: GoogleFonts.montserrat(
                                                     color: bodyTextColor,
                                                     fontSize: 14,
+                                                  ),
+                                                  a: GoogleFonts.montserrat(
+                                                    color: Colors.blue,
+                                                    fontSize: 14,
+                                                    decoration:
+                                                        TextDecoration.underline,
                                                   ),
                                                   h1: GoogleFonts.montserrat(
                                                     color: bodyTextColor,
@@ -641,14 +671,14 @@ class _ViewportChatState extends State<ViewportChat>
                                         IconButton(
                                           onPressed:
                                               (_hasDiagnosis && !_isLoading)
-                                              ? _fetchSourcesFromChat
-                                              : null,
+                                                  ? _fetchSourcesFromChat
+                                                  : null,
                                           icon: Icon(
                                             Icons.pages_rounded,
                                             color:
                                                 (_hasDiagnosis && !_isLoading)
-                                                ? controlIconColor
-                                                : disabledIconColor,
+                                                    ? controlIconColor
+                                                    : disabledIconColor,
                                             size: 30,
                                           ),
                                           tooltip: _hasDiagnosis
