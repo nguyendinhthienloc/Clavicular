@@ -80,6 +80,34 @@ class AIService {
 			return response;
 		}
 	}
+
+	async sources(bodyParts, severity, painType, duration, trigger, lat, lng) {
+		const query = `Body region: ${bodyParts.join(', ')}\nSeverity: ${severity}\nPain type: ${painType}\nDuration: ${duration}\nActivity trigger: ${trigger}`;
+
+		try {
+			const res = await axios.post(`${this.locAIBaseURL}/api/sources`, {
+				language: "en",
+				query: query,
+				lat: lat,
+				lng: lng
+			});
+			const response = new ServiceResponse(
+				true,
+				200,
+				"Success",
+				res.data.results
+			)
+			return response;
+		} catch (err) {
+			const response = new ServiceResponse(
+				false,
+				502,
+				"Something went wrong",
+				err.toString()
+			);
+			return response;
+		}
+	}
 }
 
 export default new AIService();
