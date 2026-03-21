@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, Literal, Optional
 
 from fastapi import FastAPI, HTTPException, Request
@@ -12,21 +13,28 @@ from pydantic import BaseModel, Field
 try:
     from .config import get_env, load_env
     from .exa_client import search_medical_sources
+    from .fal_client import generate_body_image as generate_fal_image
     from .gemini_client import generate_body_image
     from .elevenlabs_client import synthesize_speech
     from .openrouter_client import call_diagnosis
+    from .places_client import find_nearby_clinics
 except ImportError:
     from config import get_env, load_env
     from exa_client import search_medical_sources
+    from fal_client import generate_body_image as generate_fal_image
     from gemini_client import generate_body_image
     from elevenlabs_client import synthesize_speech
     from openrouter_client import call_diagnosis
+    from places_client import find_nearby_clinics
 
 
 class DiagnoseRequest(BaseModel):
     user_message: Optional[str] = None
     query: Optional[str] = None
+    region_name: Optional[str] = None
     language: Literal["en", "vi"] = "en"
+    lat: Optional[float] = None
+    lng: Optional[float] = None
 
 
 class AnalyzeRequest(BaseModel):
@@ -58,6 +66,7 @@ class EchoRequest(BaseModel):
 
 
 app = FastAPI(title="BodyCheck Person 3 API", version="1.0.0")
+logger = logging.getLogger("ai_dev.server")
 
 
 def _first_non_empty(*values: Optional[str]) -> Optional[str]:
@@ -67,10 +76,38 @@ def _first_non_empty(*values: Optional[str]) -> Optional[str]:
     return None
 
 
+def _parse_cors_origins(raw: Optional[str]) -> list[str]:
+    if not raw or raw.strip() == "*":
+        return ["*"]
+    return [part.strip() for part in raw.split(",") if part.strip()]
+
+
+MUSCLE_MAP = {
+    "Rectus_Abdominis_L": "Left rectus abdominis (lower abdomen)",
+    "Rectus_Abdominis_R": "Right rectus abdominis (lower abdomen)",
+    "Deltoid_L": "Left deltoid (shoulder muscle)",
+    "Deltoid_R": "Right deltoid (shoulder muscle)",
+    "Biceps_Brachii_L": "Left biceps (upper arm)",
+    "Biceps_Brachii_R": "Right biceps (upper arm)",
+    "Gastrocnemius_L": "Left calf muscle",
+    "Gastrocnemius_R": "Right calf muscle",
+    "Trapezius": "Trapezius (upper back and neck muscle)",
+    "Latissimus_Dorsi_L": "Left latissimus dorsi (mid back)",
+    "Latissimus_Dorsi_R": "Right latissimus dorsi (mid back)",
+}
+
+
+def clean_muscle_name(raw: str) -> str:
+    if raw in MUSCLE_MAP:
+        return MUSCLE_MAP[raw]
+    return raw.replace("_", " ").strip()
+
+
 @app.exception_handler(RequestValidationError)
 async def request_validation_exception_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
+    logger.warning("Validation error on %s: %s", request.url.path, exc)
     return JSONResponse(
         status_code=400,
         content={
@@ -82,11 +119,26 @@ async def request_validation_exception_handler(
         },
     )
 
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.exception("Unhandled server error on %s", request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "error": "Internal server error",
+            "path": request.url.path,
+        },
+    )
+
 # Keep open CORS for hackathon integration speed.
+cors_origins = _parse_cors_origins(get_env("CORS_ALLOW_ORIGINS", "*"))
+allow_credentials = cors_origins != ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -218,13 +270,30 @@ def echo(payload: EchoRequest) -> Dict[str, Any]:
 
 @app.post("/api/diagnose")
 def diagnose(payload: DiagnoseRequest) -> Dict[str, Any]:
-    user_message = _first_non_empty(payload.user_message, payload.query)
+    if payload.region_name and payload.region_name.strip():
+        cleaned = clean_muscle_name(payload.region_name)
+        user_message = f"Body region: {cleaned}\nPain type: not specified\nSeverity: unknown"
+    else:
+        user_message = _first_non_empty(payload.user_message, payload.query)
+
     if not user_message:
-        raise HTTPException(status_code=400, detail="Missing user_message (or query)")
+        raise HTTPException(status_code=400, detail="Missing user_message, query, or region_name")
 
     openrouter_key = get_env("OPENROUTER_KEY")
     diagnosis = call_diagnosis(openrouter_key, user_message, payload.language)
-    return {"success": True, "data": diagnosis}
+
+    clinics = []
+    if payload.lat is not None and payload.lng is not None:
+        top_condition = diagnosis.get("conditions", [{}])[0].get("name", "")
+        google_key = get_env("GOOGLE_PLACES_KEY")
+        clinics = find_nearby_clinics(
+            lat=payload.lat,
+            lng=payload.lng,
+            condition_name=top_condition,
+            google_key=google_key,
+        )
+
+    return {"success": True, "data": diagnosis, "clinics": clinics}
 
 
 @app.post("/api/tts")
@@ -296,15 +365,34 @@ def analyze(payload: AnalyzeRequest) -> Dict[str, Any]:
 @app.post("/api/image")
 def image(payload: ImageRequest) -> Dict[str, Any]:
     gemini_key = get_env("GEMINI_KEY")
-    if not gemini_key:
-        raise HTTPException(status_code=400, detail="Missing GEMINI_KEY")
+    fal_key = get_env("FAL_KEY")
 
+    if not gemini_key and not fal_key:
+        raise HTTPException(status_code=400, detail="Missing GEMINI_KEY and FAL_KEY")
+
+    image_data = None
+    provider = None
     try:
-        image_data = generate_body_image(payload.region_name, gemini_key)
+        if gemini_key:
+            image_data = generate_body_image(payload.region_name, gemini_key)
+            if image_data:
+                provider = "gemini"
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Gemini image failed: {exc}") from exc
+        logger.warning("Gemini image generation failed: %s", exc)
+
+    if not image_data and fal_key:
+        try:
+            prompt = (
+                f"Medical illustration of the human {payload.region_name}, highlighted in red, "
+                "clean white background, anatomical diagram style, no text labels"
+            )
+            image_data = generate_fal_image(fal_key=fal_key, prompt=prompt)
+            if image_data:
+                provider = "fal"
+        except Exception as exc:
+            logger.warning("FAL image generation failed: %s", exc)
 
     if not image_data:
-        raise HTTPException(status_code=502, detail="Image generation failed")
+        raise HTTPException(status_code=502, detail="Image generation failed on all providers")
 
-    return {"success": True, "image": image_data}
+    return {"success": True, "image": image_data, "provider": provider}
