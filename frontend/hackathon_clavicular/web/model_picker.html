@@ -380,7 +380,7 @@
               isHoverSelectHeld = true;
             } else if (event.key === 'Shift') {
               isShiftMultiSelect = true;
-            } else if (event.key === 'Control') {
+            } else if (event.key === 'Control' || event.key === 'Escape') {
               event.preventDefault();
               clearHighlight();
               notifySelection(null);

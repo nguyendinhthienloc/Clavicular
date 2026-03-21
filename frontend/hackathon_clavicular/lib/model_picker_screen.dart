@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'three_model_view.dart';
 import 'viewport_chat.dart';
 import 'viewport_diagnosis.dart';
@@ -127,10 +129,15 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
     });
   }
 
+  void _toggleLayerMenuVisible() {
+    setState(() {
+      _isLayerMenuOpen = !_isLayerMenuOpen;
+    });
+  }
+
   void _selectLayer(String layer) {
     setState(() {
       _selectedLayer = layer;
-      _isLayerMenuOpen = false;
     });
     // Hook to actual filtering when backend support is added.
   }
@@ -260,9 +267,7 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                               Positioned(
                                 top: 20,
                                 right: 20,
-                                child: MouseRegion(
-                                  onEnter: (_) => _setLayerMenuVisible(true),
-                                  onExit: (_) => _setLayerMenuVisible(false),
+                                child: PointerInterceptor(
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,29 +386,26 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                                                 ),
                                               ),
                                       ),
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          color: guideIconBackground,
-                                          borderRadius:
-                                              BorderRadius.circular(999),
-                                          border: Border.all(
-                                            color: guideBorderColor,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withValues(
-                                                alpha: 0.25,
+                                      MouseRegion(
+                                        cursor: SystemMouseCursors.click,
+                                        child: GestureDetector(
+                                          onTap: _toggleLayerMenuVisible,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: guideIconBackground,
+                                              borderRadius:
+                                                  BorderRadius.circular(999),
+                                              border: Border.all(
+                                                color: guideBorderColor,
                                               ),
-                                              blurRadius: 10,
-                                              offset: const Offset(0, 5),
                                             ),
-                                          ],
-                                        ),
-                                        padding: const EdgeInsets.all(10),
-                                        child: Icon(
-                                          Icons.layers,
-                                          color: iconColor,
-                                          size: 20,
+                                            padding: const EdgeInsets.all(10),
+                                            child: Icon(
+                                              Icons.layers,
+                                              color: iconColor,
+                                              size: 20,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -413,38 +415,31 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                               Positioned(
                                 left: 20,
                                 bottom: 20,
-                                child: MouseRegion(
-                                  onEnter: (_) =>
-                                      _setControlsGuideVisible(true),
-                                  onExit: (_) =>
-                                      _setControlsGuideVisible(false),
+                                child: PointerInterceptor(
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          color: guideIconBackground,
-                                          borderRadius:
-                                              BorderRadius.circular(999),
-                                          border: Border.all(
-                                            color: guideBorderColor,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withValues(
-                                                alpha: 0.25,
-                                              ),
-                                              blurRadius: 10,
-                                              offset: const Offset(0, 5),
+                                      MouseRegion(
+                                        onEnter: (_) =>
+                                            _setControlsGuideVisible(true),
+                                        onExit: (_) =>
+                                            _setControlsGuideVisible(false),
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: guideIconBackground,
+                                            borderRadius:
+                                                BorderRadius.circular(999),
+                                            border: Border.all(
+                                              color: guideBorderColor,
                                             ),
-                                          ],
-                                        ),
-                                        padding: const EdgeInsets.all(10),
-                                        child: Icon(
-                                          Icons.help_outline,
-                                          color: iconColor,
-                                          size: 20,
+                                          ),
+                                          padding: const EdgeInsets.all(10),
+                                          child: Icon(
+                                            Icons.help_outline,
+                                            color: iconColor,
+                                            size: 20,
+                                          ),
                                         ),
                                       ),
                                       AnimatedSize(
