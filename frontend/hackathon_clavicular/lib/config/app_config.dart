@@ -15,7 +15,7 @@ class AppConfig {
         dotenv.env['BACKEND_TUNNEL_URL'] ?? 'http://localhost:3000';
     aiApiTunnel =
         dotenv.env['AI_API_TUNNEL'] ??
-        'https://golf-divide-canyon-scanned.trycloudflare.com/api/ai/send-prompt';
+        'https://pie-reform-los-outer.trycloudflare.com/api/ai/send-prompt';
   }
 
   static Future<void> initSingleton() => instance.init();
