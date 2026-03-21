@@ -227,6 +227,43 @@ class _ViewportChatState extends State<ViewportChat>
     return '- [$safeTitle]($url)';
   }
 
+  String _extractAssistantMessage(dynamic payload) {
+    if (payload is String) {
+      return payload.trim();
+    }
+
+    if (payload is! Map<String, dynamic>) {
+      return payload?.toString().trim() ?? '';
+    }
+
+    final dynamic textField = payload['text'];
+    if (textField is String && textField.trim().isNotEmpty) {
+      return textField.trim();
+    }
+
+    final dynamic dataField = payload['data'];
+    if (dataField is String && dataField.trim().isNotEmpty) {
+      return dataField.trim();
+    }
+
+    if (dataField is Map<String, dynamic>) {
+      final dynamic nestedText = dataField['text'];
+      if (nestedText is String && nestedText.trim().isNotEmpty) {
+        return nestedText.trim();
+      }
+
+      final dynamic nestedData = dataField['data'];
+      if (nestedData is Map<String, dynamic>) {
+        final dynamic deeplyNestedText = nestedData['text'];
+        if (deeplyNestedText is String && deeplyNestedText.trim().isNotEmpty) {
+          return deeplyNestedText.trim();
+        }
+      }
+    }
+
+    return '';
+  }
+
   Future<void> _sendMessage() async {
     final String text = _controller.text.trim();
     if (text.isEmpty) {
@@ -278,16 +315,10 @@ class _ViewportChatState extends State<ViewportChat>
               _hasDiagnosis = true;
             }
 
-            final dynamic dataField = responseData['payload'];
-            String assistantMessage = '';
-
-            if (dataField is String) {
-              assistantMessage = dataField;
-            } else if (dataField is Map<String, dynamic>) {
-              assistantMessage = dataField['data'] ?? '';
-            } else if (dataField != null) {
-              assistantMessage = dataField.toString();
-            }
+            final dynamic payloadField = responseData['payload'];
+            final String assistantMessage = _extractAssistantMessage(
+              payloadField,
+            );
 
             if (assistantMessage.isEmpty) {
               _messages.add(
@@ -564,85 +595,6 @@ class _ViewportChatState extends State<ViewportChat>
         .toList();
   }
 
-  Future<List<String>> _fetchConditionNamesFromDiagnose(
-    _UserLocation location,
-  ) async {
-    final String latestPrompt = _latestUserPrompt;
-    if (latestPrompt.isEmpty) {
-      return const <String>[];
-    }
-
-    final List<String> bodyParts = widget.selectedBodyParts
-        .map((String value) => value.trim())
-        .where(
-          (String value) => value.isNotEmpty && value != 'Nothing selected',
-        )
-        .toList();
-
-    final List<_DiagnoseProbeRequest> requests = <_DiagnoseProbeRequest>[
-      _DiagnoseProbeRequest(
-        url: '${AppConfig.backendTunnelUrlValue}/api/diagnose',
-        body: <String, dynamic>{
-          'user_message': latestPrompt,
-          'query': latestPrompt,
-          'language': 'en',
-          'lat': location.lat,
-          'lng': location.lng,
-        },
-      ),
-      _DiagnoseProbeRequest(
-        url: '${AppConfig.backendTunnelUrlValue}/api/ai/diagnose',
-        body: <String, dynamic>{
-          'bodyParts': bodyParts.isEmpty ? <String>[latestPrompt] : bodyParts,
-          'severity': 'Mild',
-          'painType': 'sharp',
-          'duration': '< 1 week',
-          'trigger': 'Rest',
-          'lat': location.lat,
-          'lng': location.lng,
-        },
-      ),
-      _DiagnoseProbeRequest(
-        url: '${AppConfig.apiEndpoint}/ai/diagnose',
-        body: <String, dynamic>{
-          'bodyParts': bodyParts.isEmpty ? <String>[latestPrompt] : bodyParts,
-          'severity': 'Mild',
-          'painType': 'sharp',
-          'duration': '< 1 week',
-          'trigger': 'Rest',
-          'lat': location.lat,
-          'lng': location.lng,
-        },
-      ),
-    ];
-
-    for (final _DiagnoseProbeRequest request in requests) {
-      try {
-        final Response<dynamic> diagnoseResponse = await _dio
-            .post<dynamic>(
-              request.url,
-              data: request.body,
-              options: Options(
-                receiveTimeout: const Duration(seconds: 30),
-                sendTimeout: const Duration(seconds: 30),
-              ),
-            )
-            .timeout(const Duration(seconds: 35));
-
-        final List<String> names = _extractConditionNames(
-          diagnoseResponse.data,
-        );
-        if (names.isNotEmpty) {
-          return names;
-        }
-      } catch (_) {
-        continue;
-      }
-    }
-
-    return const <String>[];
-  }
-
   String get _latestUserPrompt {
     for (int index = _messages.length - 1; index >= 0; index--) {
       final _ChatMessage message = _messages[index];
@@ -734,10 +686,13 @@ class _ViewportChatState extends State<ViewportChat>
   List<_PlacePoint> _extractPlacesFromList(List<dynamic> rawItems) {
     final List<_PlacePoint> places = <_PlacePoint>[];
 
-    for (final dynamic raw in rawItems) {
+    for (int index = 0; index < rawItems.length; index++) {
+      final dynamic raw = rawItems[index];
       if (raw is! Map) {
         continue;
       }
+
+      _debugPrintRawPlaceCoordinates(raw, index);
 
       final String name = (raw['name'] ?? '').toString().trim();
       if (name.isEmpty) {
@@ -797,6 +752,38 @@ class _ViewportChatState extends State<ViewportChat>
     return places;
   }
 
+  void _debugPrintRawPlaceCoordinates(Map raw, int index) {
+    final dynamic latCandidate = raw['lat'] ?? raw['latitude'];
+    final dynamic lngCandidate = raw['lng'] ?? raw['lon'] ?? raw['longitude'];
+
+    dynamic geocodesLat;
+    dynamic geocodesLng;
+    final dynamic geocodes = raw['geocodes'];
+    if (geocodes is Map) {
+      final dynamic main = geocodes['main'];
+      if (main is Map) {
+        geocodesLat = main['lat'] ?? main['latitude'];
+        geocodesLng = main['lng'] ?? main['longitude'];
+      }
+    }
+
+    dynamic positionLat;
+    dynamic positionLng;
+    final dynamic position = raw['position'];
+    if (position is Map) {
+      positionLat = position['lat'] ?? position['latitude'];
+      positionLng = position['lng'] ?? position['longitude'];
+    }
+
+    final String mapsUrl =
+        (raw['maps_url'] ?? raw['mapsUrl'] ?? raw['google_maps_url'] ?? '')
+            .toString();
+
+    debugPrint(
+      '[POST /api/ai/clinics][raw#$index] lat=$latCandidate lng=$lngCandidate geocodes.lat=$geocodesLat geocodes.lng=$geocodesLng position.lat=$positionLat position.lng=$positionLng mapsUrl=$mapsUrl',
+    );
+  }
+
   double? _tryParseDouble(dynamic value) {
     if (value is num) {
       return value.toDouble();
@@ -836,95 +823,17 @@ class _ViewportChatState extends State<ViewportChat>
     return _UserLocation(lat, lng);
   }
 
-  Future<List<_PlacePoint>> _fetchPlacesFromDiagnose(
-    _UserLocation location,
-    List<String> names,
-  ) async {
-    final String latestPrompt = _latestUserPrompt;
-    final String resolvedPrompt = latestPrompt.isNotEmpty
-        ? latestPrompt
-        : 'Possible conditions: ${names.join(', ')}';
-
-    final List<String> bodyParts = widget.selectedBodyParts
-        .map((String value) => value.trim())
-        .where(
-          (String value) => value.isNotEmpty && value != 'Nothing selected',
-        )
-        .toList();
-
-    final List<_DiagnoseProbeRequest> requests = <_DiagnoseProbeRequest>[
-      _DiagnoseProbeRequest(
-        url: '${AppConfig.backendTunnelUrlValue}/api/diagnose',
-        body: <String, dynamic>{
-          'user_message': resolvedPrompt,
-          'query': resolvedPrompt,
-          'language': 'en',
-          'lat': location.lat,
-          'lng': location.lng,
-        },
-      ),
-      _DiagnoseProbeRequest(
-        url: '${AppConfig.apiEndpoint}/ai/diagnose',
-        body: <String, dynamic>{
-          'bodyParts': bodyParts.isEmpty ? names : bodyParts,
-          'severity': 'Mild',
-          'painType': 'sharp',
-          'duration': '< 1 week',
-          'trigger': 'Rest',
-          'lat': location.lat,
-          'lng': location.lng,
-        },
-      ),
-      _DiagnoseProbeRequest(
-        url: '${AppConfig.backendTunnelUrlValue}/api/ai/diagnose',
-        body: <String, dynamic>{
-          'bodyParts': bodyParts.isEmpty ? names : bodyParts,
-          'severity': 'Mild',
-          'painType': 'sharp',
-          'duration': '< 1 week',
-          'trigger': 'Rest',
-          'lat': location.lat,
-          'lng': location.lng,
-        },
-      ),
-    ];
-
-    final Set<String> seenUrls = <String>{};
-    for (final _DiagnoseProbeRequest request in requests) {
-      if (seenUrls.contains(request.url)) {
-        continue;
-      }
-      seenUrls.add(request.url);
-      try {
-        debugPrint(
-          '[POST diagnose-probe] ${request.url} payload: ${jsonEncode(request.body)}',
-        );
-        final Response<dynamic> response = await _dio
-            .post<dynamic>(
-              request.url,
-              data: request.body,
-              options: Options(
-                receiveTimeout: const Duration(seconds: 30),
-                sendTimeout: const Duration(seconds: 30),
-              ),
-            )
-            .timeout(const Duration(seconds: 35));
-
-        debugPrint(
-          '[POST diagnose-probe] ${request.url} response: ${jsonEncode(response.data)}',
-        );
-
-        final List<_PlacePoint> places = _extractPlaces(response.data);
-        if (places.isNotEmpty) {
-          return places;
-        }
-      } catch (error) {
-        debugPrint('[POST diagnose-probe] ${request.url} failed: $error');
-        continue;
-      }
+  void _debugPrintPlaces(String source, List<_PlacePoint> places) {
+    if (places.isEmpty) {
+      debugPrint('[$source] parsed places: []');
+      return;
     }
 
-    return const <_PlacePoint>[];
+    for (final _PlacePoint place in places) {
+      debugPrint(
+        '[$source] ${place.name} | lat=${place.lat} | lng=${place.lng}',
+      );
+    }
   }
 
   Future<void> showMap() async {
@@ -944,9 +853,6 @@ class _ViewportChatState extends State<ViewportChat>
 
       List<String> names = _conditionNames;
       if (names.isEmpty) {
-        names = await _fetchConditionNamesFromDiagnose(location);
-      }
-      if (names.isEmpty) {
         names = _fallbackConditionNames();
       }
 
@@ -958,8 +864,8 @@ class _ViewportChatState extends State<ViewportChat>
 
       final Map<String, dynamic> mapPostPayload = <String, dynamic>{
         'conditionName': normalizedPrimaryCondition,
-        'lat': location.lat,
-        'lng': location.lng,
+        'lat': 10.822,
+        'lng': 106.6257,
       };
       debugPrint(
         '[POST /api/ai/clinics] payload: ${jsonEncode(mapPostPayload)}',
@@ -980,12 +886,9 @@ class _ViewportChatState extends State<ViewportChat>
         );
 
         places = _extractPlaces(getProbeResponse.data);
+        _debugPrintPlaces('POST /api/ai/clinics', places);
       } catch (error) {
         debugPrint('[POST /api/ai/clinics] failed: $error');
-      }
-
-      if (places.isEmpty) {
-        places = await _fetchPlacesFromDiagnose(location, names);
       }
 
       if (!mounted) {
@@ -1688,11 +1591,4 @@ class _PlacePoint {
   final double lat;
   final double lng;
   final String address;
-}
-
-class _DiagnoseProbeRequest {
-  const _DiagnoseProbeRequest({required this.url, required this.body});
-
-  final String url;
-  final Map<String, dynamic> body;
 }
