@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -17,6 +17,7 @@ try:
     from .gemini_client import generate_body_image
     from .elevenlabs_client import synthesize_speech
     from .openrouter_client import call_diagnosis
+    from .openai_chat_client import DEFAULT_CHAT_MODEL, chat_with_clinician
     from .places_client import find_nearby_clinics
 except ImportError:
     from config import get_env, load_env
@@ -25,6 +26,7 @@ except ImportError:
     from gemini_client import generate_body_image
     from elevenlabs_client import synthesize_speech
     from openrouter_client import call_diagnosis
+    from openai_chat_client import DEFAULT_CHAT_MODEL, chat_with_clinician
     from places_client import find_nearby_clinics
 
 
@@ -66,6 +68,19 @@ class ImageRequest(BaseModel):
 
 class EchoRequest(BaseModel):
     text: str = Field(min_length=1)
+
+
+class ChatHistoryMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1)
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(min_length=1)
+    language: Literal["en", "vi"] = "en"
+    history: List[ChatHistoryMessage] = Field(default_factory=list)
+    model: str = DEFAULT_CHAT_MODEL
+    temperature: float = Field(default=0.4, ge=0.0, le=1.5)
 
 
 app = FastAPI(title="BodyCheck Person 3 API", version="1.0.0")
@@ -179,6 +194,7 @@ def root() -> Dict[str, Any]:
                 "endpoints": [
                         "GET /health",
                         "POST /api/echo",
+            "POST /api/chat",
                         "POST /api/diagnose",
                         "POST /api/sources",
                     "POST /api/analyze",
@@ -320,6 +336,35 @@ def echo(payload: EchoRequest) -> Dict[str, Any]:
                 "output": payload.text,
                 "length": len(payload.text),
         }
+
+
+@app.post("/api/chat")
+def chat(payload: ChatRequest) -> Dict[str, Any]:
+    openai_key = get_env("OPENAI_API_KEY")
+    if not openai_key:
+        raise HTTPException(status_code=400, detail="Missing OPENAI_API_KEY")
+
+    try:
+        history = [item.model_dump() for item in payload.history]
+        reply, used_model = chat_with_clinician(
+            openai_key=openai_key,
+            user_message=payload.message,
+            language=payload.language,
+            history=history,
+            model=payload.model,
+            temperature=payload.temperature,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"OpenAI chat failed: {exc}") from exc
+
+    return {
+        "success": True,
+        "reply": reply,
+        "model": used_model,
+        "roleplay": "trained_clinician",
+    }
 
 
 @app.post("/api/diagnose")
