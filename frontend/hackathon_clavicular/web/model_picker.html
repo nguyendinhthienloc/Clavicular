@@ -35,10 +35,10 @@
         background: transparent;
       }
 
-      #status {
+      #status,
+      #instructions {
         position: absolute;
         top: 12px;
-        left: 12px;
         z-index: 10;
         background: rgba(0, 0, 0, 0.75);
         color: #f5f5f5;
@@ -47,6 +47,16 @@
         max-width: 80%;
         white-space: pre-wrap;
         font-size: 13px;
+        line-height: 1.35;
+      }
+
+      #status {
+        left: 12px;
+      }
+
+      #instructions {
+        right: 12px;
+        text-align: right;
       }
 
       canvas {
@@ -57,10 +67,17 @@
   <body>
     <div id="app">
       <div id="status">Booting viewer...</div>
+      <div id="instructions">
+        <div class="instruction-line">Right click + scroll - Move around
+          Left click - Select single
+          Shift + left click - Select multiple
+          Space - Paint</div>
+      </div>
     </div>
 
     <script>
       const statusEl = document.getElementById('status');
+      const instructionsEl = document.getElementById('instructions');
       const container = document.getElementById('app');
       let renderer = null;
       let scene = null;
@@ -121,6 +138,10 @@
           ? 'rgba(21, 21, 21, 0.8)'
           : 'rgba(255, 255, 255, 0.95)';
         statusEl.style.color = isDark ? '#f5f5f5' : '#1f2937';
+        instructionsEl.style.background = isDark
+          ? 'rgba(21, 21, 21, 0.8)'
+          : 'rgba(255, 255, 255, 0.95)';
+        instructionsEl.style.color = isDark ? '#f5f5f5' : '#1f2937';
 
         if (scene && THREERef) {
           scene.background = new THREERef.Color(isDark ? 0x1f1f1f : 0xf4f6f8);
@@ -224,9 +245,9 @@
               return null;
             }
             return (
-              mesh.name ||
-              (mesh.parent && mesh.parent.name) ||
-              '(unnamed part)'
+              mesh.name.split('_').join(' ') ||
+              (mesh.parent.split('_').join(' ') && mesh.parent.name.split('_').join(' ')) ||
+              'unnamed part'
             );
           }
 
@@ -346,6 +367,10 @@
               isHoverSelectHeld = true;
             } else if (event.key === 'Shift') {
               isShiftMultiSelect = true;
+            } else if (event.key === 'Control') {
+              event.preventDefault();
+              clearHighlight();
+              notifySelection(null);
             }
           });
 
@@ -519,3 +544,12 @@
     </script>
   </body>
 </html>
+      #instructions .instruction-line {
+        margin: 0;
+        line-height: 1.2;
+        white-space: nowrap;
+      }
+
+      #instructions .instruction-line + .instruction-line {
+        margin-top: 4px;
+      }
