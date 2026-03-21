@@ -3,7 +3,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
+import 'dart:convert';
 import 'config/app_config.dart';
+import 'package:flutter_map/flutter_map.dart';
 
 class ViewportChat extends StatefulWidget {
   const ViewportChat({
@@ -38,8 +42,10 @@ class _ViewportChatState extends State<ViewportChat>
   bool _isTyping = false;
   bool _hasSentFirstMessage = false;
   bool _isLoading = false;
+  bool _isLoadingMap = false;
   bool _hasDiagnosis = false;
   int _lastInjectedAssistantVersion = -1;
+  List<String> _conditionNames = <String>[];
 
   @override
   void initState() {
@@ -150,12 +156,13 @@ class _ViewportChatState extends State<ViewportChat>
         );
       });
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-        _hasSentFirstMessage = true;
-        _isTyping = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _hasSentFirstMessage = true;
+          _isTyping = false;
+        });
+      }
     }
   }
 
@@ -214,7 +221,9 @@ class _ViewportChatState extends State<ViewportChat>
       return '';
     }
 
-    final String safeTitle = title.replaceAll('[', r'\[').replaceAll(']', r'\]');
+    final String safeTitle = title
+        .replaceAll('[', r'\[')
+        .replaceAll(']', r'\]');
     return '- [$safeTitle]($url)';
   }
 
@@ -237,10 +246,15 @@ class _ViewportChatState extends State<ViewportChat>
     });
 
     try {
+      final Map<String, dynamic> chatPayload = <String, dynamic>{
+        'message': text,
+      };
+      debugPrint('[POST /api/ai/chat] payload: ${jsonEncode(chatPayload)}');
+
       final Response<dynamic> response = await _dio
           .post<Map<String, dynamic>>(
-            AppConfig.aiApiTunnelValue,
-            data: <String, dynamic>{'prompt': text},
+            '${AppConfig.apiEndpoint}/ai/chat',
+            data: chatPayload,
             options: Options(
               receiveTimeout: const Duration(seconds: 30),
               sendTimeout: const Duration(seconds: 30),
@@ -256,6 +270,13 @@ class _ViewportChatState extends State<ViewportChat>
           try {
             final Map<String, dynamic> responseData =
                 response.data as Map<String, dynamic>;
+            final List<String> conditionNames = _extractConditionNames(
+              responseData,
+            );
+            if (conditionNames.isNotEmpty) {
+              _conditionNames = conditionNames;
+              _hasDiagnosis = true;
+            }
 
             final dynamic dataField = responseData['payload'];
             String assistantMessage = '';
@@ -323,6 +344,683 @@ class _ViewportChatState extends State<ViewportChat>
           _ChatMessage(text: 'Unexpected error: $e', isUser: false),
         );
       });
+    }
+  }
+
+  Future<void> _showLocationPrompt({
+    required String title,
+    required String message,
+    required Future<bool> Function() onOpenSettings,
+  }) async {
+    if (!mounted) {
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                await onOpenSettings();
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              },
+              child: const Text('Open settings'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<_UserLocation?> _resolveCurrentLocationForMap() async {
+    try {
+      final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        await _showLocationPrompt(
+          title: 'Turn on location',
+          message:
+              'Location services are off. Turn on location services to show nearby places on the map.',
+          onOpenSettings: Geolocator.openLocationSettings,
+        );
+        return null;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied) {
+        await _showLocationPrompt(
+          title: 'Location permission needed',
+          message:
+              'Please allow location access so nearby places can be shown on the map.',
+          onOpenSettings: Geolocator.openAppSettings,
+        );
+        return null;
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        await _showLocationPrompt(
+          title: 'Permission denied forever',
+          message:
+              'Location permission is permanently denied. Enable it in app settings to continue.',
+          onOpenSettings: Geolocator.openAppSettings,
+        );
+        return null;
+      }
+
+      final Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+
+      return _UserLocation(position.latitude, position.longitude);
+    } catch (_) {
+      if (!mounted) {
+        return null;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not get your location. Please try again.'),
+        ),
+      );
+      return null;
+    }
+  }
+
+  List<String> _extractConditionNames(dynamic responseData) {
+    if (responseData is String) {
+      final List<String> namesFromText = _extractConditionNamesFromText(
+        responseData,
+      );
+      if (namesFromText.isNotEmpty) {
+        return namesFromText;
+      }
+    }
+
+    if (responseData is! Map<String, dynamic>) {
+      return const <String>[];
+    }
+
+    final List<String> namesFromRoot = _extractConditionNamesFromMap(
+      responseData,
+    );
+    if (namesFromRoot.isNotEmpty) {
+      return namesFromRoot;
+    }
+
+    final dynamic payload = responseData['payload'];
+    if (payload is Map<String, dynamic>) {
+      final List<String> namesFromPayload = _extractConditionNamesFromMap(
+        payload,
+      );
+      if (namesFromPayload.isNotEmpty) {
+        return namesFromPayload;
+      }
+
+      final dynamic payloadData = payload['data'];
+      if (payloadData is Map<String, dynamic>) {
+        final List<String> namesFromPayloadData = _extractConditionNamesFromMap(
+          payloadData,
+        );
+        if (namesFromPayloadData.isNotEmpty) {
+          return namesFromPayloadData;
+        }
+      }
+    }
+
+    final dynamic data = responseData['data'];
+    if (data is Map<String, dynamic>) {
+      return _extractConditionNamesFromMap(data);
+    }
+
+    if (data is String) {
+      final List<String> namesFromText = _extractConditionNamesFromText(data);
+      if (namesFromText.isNotEmpty) {
+        return namesFromText;
+      }
+    }
+
+    if (payload is String) {
+      final List<String> namesFromText = _extractConditionNamesFromText(
+        payload,
+      );
+      if (namesFromText.isNotEmpty) {
+        return namesFromText;
+      }
+    }
+
+    return const <String>[];
+  }
+
+  List<String> _extractConditionNamesFromText(String rawText) {
+    final String text = rawText.trim();
+    if (text.isEmpty) {
+      return const <String>[];
+    }
+
+    try {
+      final dynamic decoded = jsonDecode(text);
+      final List<String> names = _extractConditionNames(decoded);
+      if (names.isNotEmpty) {
+        return names;
+      }
+    } catch (_) {}
+
+    final RegExp jsonNamePattern = RegExp(r'"name"\s*:\s*"([^"]+)"');
+    return jsonNamePattern
+        .allMatches(text)
+        .map((RegExpMatch match) => (match.group(1) ?? '').trim())
+        .where((String name) => name.isNotEmpty)
+        .toSet()
+        .toList();
+  }
+
+  List<String> _fallbackConditionNames() {
+    final List<String> selectedBodyParts = widget.selectedBodyParts
+        .map((String value) => value.trim())
+        .where(
+          (String value) => value.isNotEmpty && value != 'Nothing selected',
+        )
+        .toList();
+
+    if (selectedBodyParts.isNotEmpty) {
+      return selectedBodyParts;
+    }
+
+    final String prompt = _latestUserPrompt;
+    if (prompt.isNotEmpty) {
+      return <String>[prompt];
+    }
+
+    return const <String>['General clinic'];
+  }
+
+  List<String> _extractConditionNamesFromMap(Map<String, dynamic> source) {
+    final dynamic conditions = source['conditions'];
+    if (conditions is! List) {
+      return const <String>[];
+    }
+
+    return conditions
+        .whereType<Map>()
+        .map((Map item) => (item['name'] ?? '').toString().trim())
+        .where((String name) => name.isNotEmpty)
+        .toList();
+  }
+
+  Future<List<String>> _fetchConditionNamesFromDiagnose(
+    _UserLocation location,
+  ) async {
+    final String latestPrompt = _latestUserPrompt;
+    if (latestPrompt.isEmpty) {
+      return const <String>[];
+    }
+
+    final List<String> bodyParts = widget.selectedBodyParts
+        .map((String value) => value.trim())
+        .where(
+          (String value) => value.isNotEmpty && value != 'Nothing selected',
+        )
+        .toList();
+
+    final List<_DiagnoseProbeRequest> requests = <_DiagnoseProbeRequest>[
+      _DiagnoseProbeRequest(
+        url: '${AppConfig.backendTunnelUrlValue}/api/diagnose',
+        body: <String, dynamic>{
+          'user_message': latestPrompt,
+          'query': latestPrompt,
+          'language': 'en',
+          'lat': location.lat,
+          'lng': location.lng,
+        },
+      ),
+      _DiagnoseProbeRequest(
+        url: '${AppConfig.backendTunnelUrlValue}/api/ai/diagnose',
+        body: <String, dynamic>{
+          'bodyParts': bodyParts.isEmpty ? <String>[latestPrompt] : bodyParts,
+          'severity': 'Mild',
+          'painType': 'sharp',
+          'duration': '< 1 week',
+          'trigger': 'Rest',
+          'lat': location.lat,
+          'lng': location.lng,
+        },
+      ),
+      _DiagnoseProbeRequest(
+        url: '${AppConfig.apiEndpoint}/ai/diagnose',
+        body: <String, dynamic>{
+          'bodyParts': bodyParts.isEmpty ? <String>[latestPrompt] : bodyParts,
+          'severity': 'Mild',
+          'painType': 'sharp',
+          'duration': '< 1 week',
+          'trigger': 'Rest',
+          'lat': location.lat,
+          'lng': location.lng,
+        },
+      ),
+    ];
+
+    for (final _DiagnoseProbeRequest request in requests) {
+      try {
+        final Response<dynamic> diagnoseResponse = await _dio
+            .post<dynamic>(
+              request.url,
+              data: request.body,
+              options: Options(
+                receiveTimeout: const Duration(seconds: 30),
+                sendTimeout: const Duration(seconds: 30),
+              ),
+            )
+            .timeout(const Duration(seconds: 35));
+
+        final List<String> names = _extractConditionNames(
+          diagnoseResponse.data,
+        );
+        if (names.isNotEmpty) {
+          return names;
+        }
+      } catch (_) {
+        continue;
+      }
+    }
+
+    return const <String>[];
+  }
+
+  String get _latestUserPrompt {
+    for (int index = _messages.length - 1; index >= 0; index--) {
+      final _ChatMessage message = _messages[index];
+      if (message.isUser && message.text.trim().isNotEmpty) {
+        return message.text.trim();
+      }
+    }
+    return '';
+  }
+
+  List<_PlacePoint> _extractPlaces(dynamic responseData) {
+    if (responseData is List) {
+      return _extractPlacesFromList(responseData);
+    }
+
+    if (responseData is! Map<String, dynamic>) {
+      return const <_PlacePoint>[];
+    }
+
+    final List<_PlacePoint> directPlaces = _extractPlacesFromMap(responseData);
+    if (directPlaces.isNotEmpty) {
+      return directPlaces;
+    }
+
+    final dynamic payload = responseData['payload'];
+    if (payload is Map<String, dynamic>) {
+      final List<_PlacePoint> payloadPlaces = _extractPlacesFromMap(payload);
+      if (payloadPlaces.isNotEmpty) {
+        return payloadPlaces;
+      }
+
+      final dynamic data = payload['data'];
+      if (data is List) {
+        final List<_PlacePoint> payloadDataPlaces = _extractPlacesFromList(
+          data,
+        );
+        if (payloadDataPlaces.isNotEmpty) {
+          return payloadDataPlaces;
+        }
+      }
+      if (data is Map<String, dynamic>) {
+        final List<_PlacePoint> dataPlaces = _extractPlacesFromMap(data);
+        if (dataPlaces.isNotEmpty) {
+          return dataPlaces;
+        }
+      }
+    }
+
+    final dynamic data = responseData['data'];
+    if (data is List) {
+      final List<_PlacePoint> dataPlaces = _extractPlacesFromList(data);
+      if (dataPlaces.isNotEmpty) {
+        return dataPlaces;
+      }
+    }
+
+    if (data is Map<String, dynamic>) {
+      final List<_PlacePoint> dataPlaces = _extractPlacesFromMap(data);
+      if (dataPlaces.isNotEmpty) {
+        return dataPlaces;
+      }
+    }
+
+    final dynamic clinics = responseData['clinics'];
+    if (clinics is List) {
+      return _extractPlacesFromList(clinics);
+    }
+
+    return const <_PlacePoint>[];
+  }
+
+  List<_PlacePoint> _extractPlacesFromMap(Map<String, dynamic> source) {
+    final dynamic places = source['places'];
+    if (places is List) {
+      final List<_PlacePoint> placeList = _extractPlacesFromList(places);
+      if (placeList.isNotEmpty) {
+        return placeList;
+      }
+    }
+
+    final dynamic clinics = source['clinics'];
+    if (clinics is List) {
+      return _extractPlacesFromList(clinics);
+    }
+
+    return const <_PlacePoint>[];
+  }
+
+  List<_PlacePoint> _extractPlacesFromList(List<dynamic> rawItems) {
+    final List<_PlacePoint> places = <_PlacePoint>[];
+
+    for (final dynamic raw in rawItems) {
+      if (raw is! Map) {
+        continue;
+      }
+
+      final String name = (raw['name'] ?? '').toString().trim();
+      if (name.isEmpty) {
+        continue;
+      }
+
+      double? lat = _tryParseDouble(raw['lat'] ?? raw['latitude']);
+      double? lng = _tryParseDouble(
+        raw['lng'] ?? raw['lon'] ?? raw['longitude'],
+      );
+
+      if (lat == null || lng == null) {
+        final dynamic geocodes = raw['geocodes'];
+        if (geocodes is Map) {
+          final dynamic main = geocodes['main'];
+          if (main is Map) {
+            lat = lat ?? _tryParseDouble(main['lat'] ?? main['latitude']);
+            lng = lng ?? _tryParseDouble(main['lng'] ?? main['longitude']);
+          }
+        }
+      }
+
+      if (lat == null || lng == null) {
+        final dynamic position = raw['position'];
+        if (position is Map) {
+          lat = lat ?? _tryParseDouble(position['lat'] ?? position['latitude']);
+          lng =
+              lng ?? _tryParseDouble(position['lng'] ?? position['longitude']);
+        }
+      }
+
+      if (lat == null || lng == null) {
+        final String mapsUrl =
+            (raw['maps_url'] ?? raw['mapsUrl'] ?? raw['google_maps_url'] ?? '')
+                .toString();
+        final _UserLocation? parsed = _parseLocationFromMapsUrl(mapsUrl);
+        if (parsed != null) {
+          lat = parsed.lat;
+          lng = parsed.lng;
+        }
+      }
+
+      if (lat == null || lng == null) {
+        continue;
+      }
+
+      places.add(
+        _PlacePoint(
+          name: name,
+          lat: lat,
+          lng: lng,
+          address: (raw['address'] ?? '').toString().trim(),
+        ),
+      );
+    }
+
+    return places;
+  }
+
+  double? _tryParseDouble(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    if (value is String) {
+      return double.tryParse(value);
+    }
+    return null;
+  }
+
+  _UserLocation? _parseLocationFromMapsUrl(String mapsUrl) {
+    if (mapsUrl.trim().isEmpty) {
+      return null;
+    }
+
+    final Uri? uri = Uri.tryParse(mapsUrl);
+    if (uri == null) {
+      return null;
+    }
+
+    final String query = uri.queryParameters['query'] ?? '';
+    if (query.isEmpty) {
+      return null;
+    }
+
+    final List<String> coordinates = query.split(',');
+    if (coordinates.length < 2) {
+      return null;
+    }
+
+    final double? lat = double.tryParse(coordinates[0].trim());
+    final double? lng = double.tryParse(coordinates[1].trim());
+    if (lat == null || lng == null) {
+      return null;
+    }
+
+    return _UserLocation(lat, lng);
+  }
+
+  Future<List<_PlacePoint>> _fetchPlacesFromDiagnose(
+    _UserLocation location,
+    List<String> names,
+  ) async {
+    final String latestPrompt = _latestUserPrompt;
+    final String resolvedPrompt = latestPrompt.isNotEmpty
+        ? latestPrompt
+        : 'Possible conditions: ${names.join(', ')}';
+
+    final List<String> bodyParts = widget.selectedBodyParts
+        .map((String value) => value.trim())
+        .where(
+          (String value) => value.isNotEmpty && value != 'Nothing selected',
+        )
+        .toList();
+
+    final List<_DiagnoseProbeRequest> requests = <_DiagnoseProbeRequest>[
+      _DiagnoseProbeRequest(
+        url: '${AppConfig.backendTunnelUrlValue}/api/diagnose',
+        body: <String, dynamic>{
+          'user_message': resolvedPrompt,
+          'query': resolvedPrompt,
+          'language': 'en',
+          'lat': location.lat,
+          'lng': location.lng,
+        },
+      ),
+      _DiagnoseProbeRequest(
+        url: '${AppConfig.apiEndpoint}/ai/diagnose',
+        body: <String, dynamic>{
+          'bodyParts': bodyParts.isEmpty ? names : bodyParts,
+          'severity': 'Mild',
+          'painType': 'sharp',
+          'duration': '< 1 week',
+          'trigger': 'Rest',
+          'lat': location.lat,
+          'lng': location.lng,
+        },
+      ),
+      _DiagnoseProbeRequest(
+        url: '${AppConfig.backendTunnelUrlValue}/api/ai/diagnose',
+        body: <String, dynamic>{
+          'bodyParts': bodyParts.isEmpty ? names : bodyParts,
+          'severity': 'Mild',
+          'painType': 'sharp',
+          'duration': '< 1 week',
+          'trigger': 'Rest',
+          'lat': location.lat,
+          'lng': location.lng,
+        },
+      ),
+    ];
+
+    final Set<String> seenUrls = <String>{};
+    for (final _DiagnoseProbeRequest request in requests) {
+      if (seenUrls.contains(request.url)) {
+        continue;
+      }
+      seenUrls.add(request.url);
+      try {
+        debugPrint(
+          '[POST diagnose-probe] ${request.url} payload: ${jsonEncode(request.body)}',
+        );
+        final Response<dynamic> response = await _dio
+            .post<dynamic>(
+              request.url,
+              data: request.body,
+              options: Options(
+                receiveTimeout: const Duration(seconds: 30),
+                sendTimeout: const Duration(seconds: 30),
+              ),
+            )
+            .timeout(const Duration(seconds: 35));
+
+        debugPrint(
+          '[POST diagnose-probe] ${request.url} response: ${jsonEncode(response.data)}',
+        );
+
+        final List<_PlacePoint> places = _extractPlaces(response.data);
+        if (places.isNotEmpty) {
+          return places;
+        }
+      } catch (error) {
+        debugPrint('[POST diagnose-probe] ${request.url} failed: $error');
+        continue;
+      }
+    }
+
+    return const <_PlacePoint>[];
+  }
+
+  Future<void> showMap() async {
+    if (_isLoading || _isLoadingMap) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingMap = true;
+    });
+
+    try {
+      final _UserLocation? location = await _resolveCurrentLocationForMap();
+      if (location == null) {
+        return;
+      }
+
+      List<String> names = _conditionNames;
+      if (names.isEmpty) {
+        names = await _fetchConditionNamesFromDiagnose(location);
+      }
+      if (names.isEmpty) {
+        names = _fallbackConditionNames();
+      }
+
+      _conditionNames = names;
+
+      final String normalizedPrimaryCondition = names.first
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+
+      final Map<String, dynamic> mapPostPayload = <String, dynamic>{
+        'conditionName': normalizedPrimaryCondition,
+        'lat': location.lat,
+        'lng': location.lng,
+      };
+      debugPrint(
+        '[POST /api/ai/clinics] payload: ${jsonEncode(mapPostPayload)}',
+      );
+
+      List<_PlacePoint> places = const <_PlacePoint>[];
+
+      try {
+        final Response<dynamic> getProbeResponse = await _dio
+            .post<dynamic>(
+              '${AppConfig.apiEndpoint}/ai/clinics',
+              data: mapPostPayload,
+              options: Options(receiveTimeout: const Duration(seconds: 30)),
+            )
+            .timeout(const Duration(seconds: 35));
+        debugPrint(
+          '[POST /api/ai/clinics] response: ${jsonEncode(getProbeResponse.data)}',
+        );
+
+        places = _extractPlaces(getProbeResponse.data);
+      } catch (error) {
+        debugPrint('[POST /api/ai/clinics] failed: $error');
+      }
+
+      if (places.isEmpty) {
+        places = await _fetchPlacesFromDiagnose(location, names);
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        if (places.isEmpty) {
+          _messages.add(
+            const _ChatMessage(
+              text: 'No nearby places with coordinates were returned.',
+              isUser: false,
+            ),
+          );
+        } else {
+          _messages.add(
+            _ChatMessage(text: 'Nearby places', isUser: false, places: places),
+          );
+        }
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _messages.add(
+          _ChatMessage(text: 'Map request failed: $error', isUser: false),
+        );
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingMap = false;
+        });
+      }
     }
   }
 
@@ -556,66 +1254,200 @@ class _ViewportChatState extends State<ViewportChat>
                                                   color: bodyTextColor,
                                                 ),
                                               )
-                                            : MarkdownBody(
-                                                data: message.text,
-                                                selectable: true,
-                                                onTapLink: (
-                                                  String text,
-                                                  String? href,
-                                                  String title,
-                                                ) {
-                                                  _openLink(href);
-                                                },
-                                                styleSheet: MarkdownStyleSheet(
-                                                  p: GoogleFonts.montserrat(
-                                                    color: bodyTextColor,
-                                                    fontSize: 14,
-                                                  ),
-                                                  a: GoogleFonts.montserrat(
-                                                    color: Colors.blue,
-                                                    fontSize: 14,
-                                                    decoration:
-                                                        TextDecoration.underline,
-                                                  ),
-                                                  h1: GoogleFonts.montserrat(
-                                                    color: bodyTextColor,
-                                                    fontSize: 22,
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
-                                                  h2: GoogleFonts.montserrat(
-                                                    color: bodyTextColor,
-                                                    fontSize: 20,
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
-                                                  h3: GoogleFonts.montserrat(
-                                                    color: bodyTextColor,
-                                                    fontSize: 18,
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
-                                                  listBullet:
-                                                      GoogleFonts.montserrat(
-                                                        color: bodyTextColor,
-                                                      ),
-                                                  code: GoogleFonts.robotoMono(
-                                                    color: bodyTextColor,
-                                                    fontSize: 13,
-                                                  ),
-                                                  codeblockDecoration:
-                                                      BoxDecoration(
-                                                        color: isDarkMode
-                                                            ? const Color(
-                                                                0xFF1B1B1B,
-                                                              )
-                                                            : const Color(
-                                                                0xFFF1F5F9,
+                                            : (message.places.isNotEmpty
+                                                  ? Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        if (message.text
+                                                            .trim()
+                                                            .isNotEmpty)
+                                                          Padding(
+                                                            padding:
+                                                                const EdgeInsets.only(
+                                                                  bottom: 8,
+                                                                ),
+                                                            child: Text(
+                                                              message.text,
+                                                              style: GoogleFonts.montserrat(
+                                                                color:
+                                                                    bodyTextColor,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
                                                               ),
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              8,
+                                                            ),
+                                                          ),
+                                                        ...message.places.map(
+                                                          (
+                                                            _PlacePoint place,
+                                                          ) => Padding(
+                                                            padding:
+                                                                const EdgeInsets.only(
+                                                                  bottom: 12,
+                                                                ),
+                                                            child: Column(
+                                                              crossAxisAlignment:
+                                                                  CrossAxisAlignment
+                                                                      .start,
+                                                              children: [
+                                                                Text(
+                                                                  place.name,
+                                                                  style: GoogleFonts.montserrat(
+                                                                    color:
+                                                                        bodyTextColor,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                    fontSize:
+                                                                        13,
+                                                                  ),
+                                                                ),
+                                                                if (place
+                                                                    .address
+                                                                    .isNotEmpty)
+                                                                  Padding(
+                                                                    padding:
+                                                                        const EdgeInsets.only(
+                                                                          top:
+                                                                              2,
+                                                                          bottom:
+                                                                              6,
+                                                                        ),
+                                                                    child: Text(
+                                                                      place
+                                                                          .address,
+                                                                      style: GoogleFonts.montserrat(
+                                                                        color: bodyTextColor.withValues(
+                                                                          alpha:
+                                                                              0.78,
+                                                                        ),
+                                                                        fontSize:
+                                                                            12,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                SizedBox(
+                                                                  height: 180,
+                                                                  child: ClipRRect(
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                          10,
+                                                                        ),
+                                                                    child: FlutterMap(
+                                                                      options: MapOptions(
+                                                                        initialCenter: LatLng(
+                                                                          place
+                                                                              .lat,
+                                                                          place
+                                                                              .lng,
+                                                                        ),
+                                                                        initialZoom:
+                                                                            15,
+                                                                      ),
+                                                                      children: [
+                                                                        TileLayer(
+                                                                          urlTemplate:
+                                                                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                                                          userAgentPackageName:
+                                                                              'com.hackathon.clavicular',
+                                                                        ),
+                                                                        MarkerLayer(
+                                                                          markers: [
+                                                                            Marker(
+                                                                              point: LatLng(
+                                                                                place.lat,
+                                                                                place.lng,
+                                                                              ),
+                                                                              width: 36,
+                                                                              height: 36,
+                                                                              child: const Icon(
+                                                                                Icons.location_on,
+                                                                                color: Colors.red,
+                                                                                size: 32,
+                                                                              ),
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    )
+                                                  : MarkdownBody(
+                                                      data: message.text,
+                                                      selectable: true,
+                                                      onTapLink:
+                                                          (
+                                                            String text,
+                                                            String? href,
+                                                            String title,
+                                                          ) {
+                                                            _openLink(href);
+                                                          },
+                                                      styleSheet: MarkdownStyleSheet(
+                                                        p: GoogleFonts.montserrat(
+                                                          color: bodyTextColor,
+                                                          fontSize: 14,
+                                                        ),
+                                                        a: GoogleFonts.montserrat(
+                                                          color: Colors.blue,
+                                                          fontSize: 14,
+                                                          decoration:
+                                                              TextDecoration
+                                                                  .underline,
+                                                        ),
+                                                        h1: GoogleFonts.montserrat(
+                                                          color: bodyTextColor,
+                                                          fontSize: 22,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                        ),
+                                                        h2: GoogleFonts.montserrat(
+                                                          color: bodyTextColor,
+                                                          fontSize: 20,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                        ),
+                                                        h3: GoogleFonts.montserrat(
+                                                          color: bodyTextColor,
+                                                          fontSize: 18,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                        ),
+                                                        listBullet:
+                                                            GoogleFonts.montserrat(
+                                                              color:
+                                                                  bodyTextColor,
+                                                            ),
+                                                        code:
+                                                            GoogleFonts.robotoMono(
+                                                              color:
+                                                                  bodyTextColor,
+                                                              fontSize: 13,
+                                                            ),
+                                                        codeblockDecoration:
+                                                            BoxDecoration(
+                                                              color: isDarkMode
+                                                                  ? const Color(
+                                                                      0xFF1B1B1B,
+                                                                    )
+                                                                  : const Color(
+                                                                      0xFFF1F5F9,
+                                                                    ),
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    8,
+                                                                  ),
                                                             ),
                                                       ),
-                                                ),
-                                              ),
+                                                    )),
                                       ),
                                     );
                                   },
@@ -671,21 +1503,38 @@ class _ViewportChatState extends State<ViewportChat>
                                         IconButton(
                                           onPressed:
                                               (_hasDiagnosis && !_isLoading)
-                                                  ? _fetchSourcesFromChat
-                                                  : null,
+                                              ? _fetchSourcesFromChat
+                                              : null,
                                           icon: Icon(
-                                            Icons.pages_rounded,
+                                            Icons.link,
                                             color:
                                                 (_hasDiagnosis && !_isLoading)
-                                                    ? controlIconColor
-                                                    : disabledIconColor,
+                                                ? controlIconColor
+                                                : disabledIconColor,
                                             size: 30,
                                           ),
                                           tooltip: _hasDiagnosis
                                               ? (_isLoading
                                                     ? 'Loading sources...'
-                                                    : 'Get sources')
+                                                    : 'find source from diagnosis')
                                               : 'Run diagnosis first',
+                                        ),
+                                        IconButton(
+                                          onPressed:
+                                              (!_isLoading && !_isLoadingMap)
+                                              ? showMap
+                                              : null,
+                                          icon: Icon(
+                                            Icons.map_outlined,
+                                            color:
+                                                (!_isLoading && !_isLoadingMap)
+                                                ? controlIconColor
+                                                : disabledIconColor,
+                                            size: 30,
+                                          ),
+                                          tooltip: _isLoadingMap
+                                              ? 'Loading map...'
+                                              : 'Show nearby places on map',
                                         ),
                                         const SizedBox(width: 16),
                                         Expanded(
@@ -809,8 +1658,41 @@ class _ViewportToggleButton extends StatelessWidget {
 }
 
 class _ChatMessage {
-  const _ChatMessage({required this.text, required this.isUser});
+  const _ChatMessage({
+    required this.text,
+    required this.isUser,
+    this.places = const <_PlacePoint>[],
+  });
 
   final String text;
   final bool isUser;
+  final List<_PlacePoint> places;
+}
+
+class _UserLocation {
+  const _UserLocation(this.lat, this.lng);
+
+  final double lat;
+  final double lng;
+}
+
+class _PlacePoint {
+  const _PlacePoint({
+    required this.name,
+    required this.lat,
+    required this.lng,
+    required this.address,
+  });
+
+  final String name;
+  final double lat;
+  final double lng;
+  final String address;
+}
+
+class _DiagnoseProbeRequest {
+  const _DiagnoseProbeRequest({required this.url, required this.body});
+
+  final String url;
+  final Map<String, dynamic> body;
 }
