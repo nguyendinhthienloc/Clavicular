@@ -12,10 +12,10 @@ class AppConfig {
   Future<void> init() async {
     await dotenv.load();
     backendTunnelUrl =
-        dotenv.env['BACKEND_TUNNEL_URL'] ?? 'http://localhost:3000';
+        'https://physicians-optional-sweet-vegetation.trycloudflare.com';
     aiApiTunnel =
         dotenv.env['AI_API_TUNNEL'] ??
-        'https://pie-reform-los-outer.trycloudflare.com/api/ai/send-prompt';
+        'https://physicians-optional-sweet-vegetation.trycloudflare.com/api/ai/send-prompt';
   }
 
   static Future<void> initSingleton() => instance.init();

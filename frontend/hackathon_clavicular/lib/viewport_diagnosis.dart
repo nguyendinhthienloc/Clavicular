@@ -1,19 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'config/app_config.dart';
 
 class ViewportDiagnosis extends StatefulWidget {
   const ViewportDiagnosis({
     super.key,
     required this.isDarkMode,
-    required this.selectedPart,
+    this.selectedBodyParts,
+    this.selectedPart,
     required this.selectedViewport,
     required this.onViewportChanged,
+    this.onDiagnosisReady,
   });
 
   final bool isDarkMode;
-  final String selectedPart;
+  final List<String>? selectedBodyParts;
+  final String? selectedPart;
   final String selectedViewport;
   final ValueChanged<String> onViewportChanged;
+  final ValueChanged<String>? onDiagnosisReady;
 
   @override
   State<ViewportDiagnosis> createState() => _ViewportDiagnosisState();
@@ -22,20 +28,108 @@ class ViewportDiagnosis extends StatefulWidget {
 class _ViewportDiagnosisState extends State<ViewportDiagnosis>
     with SingleTickerProviderStateMixin {
   final TextEditingController _notesController = TextEditingController();
+  late final Dio _dio;
   AnimationController? _gradientController;
 
   String _selectedSeverity = 'Mild';
   String _selectedPainType = 'sharp';
   String _selectedDuration = '< 1 week';
   String _selectedActivity = 'Rest';
+  bool _isSubmitting = false;
+
+  List<String> get _resolvedSelectedBodyParts {
+    final List<String> selectedBodyParts =
+        widget.selectedBodyParts ?? const <String>[];
+    final List<String> sanitizedParts = selectedBodyParts
+        .map((String value) => value.trim())
+        .where(
+          (String value) => value.isNotEmpty && value != 'Nothing selected',
+        )
+        .toList();
+
+    if (sanitizedParts.isNotEmpty) {
+      return sanitizedParts;
+    }
+
+    final String part = (widget.selectedPart ?? '').trim();
+    if (part.isEmpty || part == 'Nothing selected') {
+      return const <String>[];
+    }
+
+    return <String>[part];
+  }
 
   @override
   void initState() {
     super.initState();
+    _dio = Dio();
     _gradientController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 14),
     )..repeat();
+  }
+
+  Future<void> _submitDiagnosis() async {
+    final List<String> bodyParts = _resolvedSelectedBodyParts;
+    if (_isSubmitting || bodyParts.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final Response<dynamic> response = await _dio
+          .post<dynamic>(
+            '${AppConfig.apiEndpoint}/ai/diagnose',
+            data: <String, dynamic>{
+              'bodyParts': bodyParts,
+              'severity': _selectedSeverity,
+              'painType': _selectedPainType,
+              'duration': _selectedDuration,
+              'trigger': _selectedActivity,
+              'lat': null,
+              'lng': null,
+            },
+            options: Options(
+              receiveTimeout: const Duration(seconds: 30),
+              sendTimeout: const Duration(seconds: 30),
+            ),
+          )
+          .timeout(const Duration(seconds: 35));
+
+      String message = 'No diagnosis review returned.';
+      final dynamic root = response.data;
+      if (root is Map<String, dynamic>) {
+        final dynamic payload = root['payload'];
+        if (payload is Map<String, dynamic>) {
+          final dynamic dataField = payload['data'];
+          if (dataField is String && dataField.trim().isNotEmpty) {
+            message = dataField;
+          } else if (dataField != null) {
+            message = dataField.toString();
+          }
+        } else if (payload is String && payload.trim().isNotEmpty) {
+          message = payload;
+        }
+      }
+
+      widget.onDiagnosisReady?.call(message);
+    } on DioException catch (error) {
+      widget.onDiagnosisReady?.call(
+        'Failed to get diagnosis review.\n\n${error.message}',
+      );
+    } catch (error) {
+      widget.onDiagnosisReady?.call(
+        'Unexpected error while loading diagnosis review.\n\n$error',
+      );
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isSubmitting = false;
+      });
+    }
   }
 
   @override
@@ -80,6 +174,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
             widget.selectedViewport == 'diagnosis')
         ? widget.selectedViewport
         : 'chat';
+    final List<String> selectedBodyParts = _resolvedSelectedBodyParts;
     final List<Color> outlineColors = isDarkMode
         ? const [Color(0xFF60A5FA), Color(0xFF1D4ED8)]
         : const [Color(0xFF93C5FD), Color(0xFF2563EB)];
@@ -168,7 +263,9 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                         child: Column(
                           children: [
                             DropdownButtonFormField<String>(
-                              value: widget.selectedPart,
+                              initialValue: selectedBodyParts.isEmpty
+                                  ? 'Nothing selected'
+                                  : selectedBodyParts.join(', '),
                               decoration: InputDecoration(
                                 filled: true,
                                 fillColor: composerBackground,
@@ -187,8 +284,14 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                               dropdownColor: composerBackground,
                               items: [
                                 DropdownMenuItem(
-                                  value: widget.selectedPart,
-                                  child: Text(widget.selectedPart),
+                                  value: selectedBodyParts.isEmpty
+                                      ? 'Nothing selected'
+                                      : selectedBodyParts.join(', '),
+                                  child: Text(
+                                    selectedBodyParts.isEmpty
+                                        ? 'Nothing selected'
+                                        : selectedBodyParts.join(', '),
+                                  ),
                                 ),
                               ],
                               onChanged: (_) {},
@@ -433,7 +536,9 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: ElevatedButton(
-                            onPressed: () {},
+                            onPressed: selectedBodyParts.isEmpty
+                                ? null
+                                : _submitDiagnosis,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.transparent,
                               shadowColor: Colors.transparent,
@@ -446,7 +551,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                             ),
                             child: Center(
                               child: Text(
-                                'get diagnosis',
+                                _isSubmitting ? 'sending...' : 'get diagnosis',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.montserrat(
                                   fontSize: 26,

@@ -11,12 +11,16 @@ class ViewportChat extends StatefulWidget {
     required this.onThemeChanged,
     required this.selectedViewport,
     required this.onViewportChanged,
+    this.injectedAssistantMessage,
+    this.injectedAssistantVersion = 0,
   });
 
   final bool isDarkMode;
   final ValueChanged<bool> onThemeChanged;
   final String selectedViewport;
   final ValueChanged<String> onViewportChanged;
+  final String? injectedAssistantMessage;
+  final int injectedAssistantVersion;
 
   @override
   State<ViewportChat> createState() => _ViewportChatState();
@@ -31,6 +35,7 @@ class _ViewportChatState extends State<ViewportChat>
   bool _isTyping = false;
   bool _hasSentFirstMessage = false;
   bool _isLoading = false;
+  int _lastInjectedAssistantVersion = -1;
 
   @override
   void initState() {
@@ -169,6 +174,22 @@ class _ViewportChatState extends State<ViewportChat>
     _controller.dispose();
     _gradientController?.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant ViewportChat oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.injectedAssistantVersion != _lastInjectedAssistantVersion) {
+      final String text = (widget.injectedAssistantMessage ?? '').trim();
+      if (text.isNotEmpty) {
+        setState(() {
+          _messages.add(_ChatMessage(text: text, isUser: false));
+          _hasSentFirstMessage = true;
+          _isTyping = false;
+        });
+      }
+      _lastInjectedAssistantVersion = widget.injectedAssistantVersion;
+    }
   }
 
   @override

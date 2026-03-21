@@ -8,11 +8,16 @@ import 'package:flutter/material.dart';
 class ThreeModelView extends StatefulWidget {
   const ThreeModelView({
     super.key,
-    required this.onPartSelected,
+    this.onSelectionChanged,
+    this.onPartSelected,
     required this.isDarkMode,
-  });
+  }) : assert(
+         onSelectionChanged != null || onPartSelected != null,
+         'Provide onSelectionChanged or onPartSelected',
+       );
 
-  final ValueChanged<String> onPartSelected;
+  final ValueChanged<List<String>?>? onSelectionChanged;
+  final ValueChanged<String>? onPartSelected;
   final bool isDarkMode;
 
   @override
@@ -52,9 +57,38 @@ class _ThreeModelViewState extends State<ThreeModelView> {
     }
 
     if (payload['type'] == 'part-selected') {
+      final dynamic rawNames = payload['names'];
+      List<String> names = <String>[];
+
+      if (rawNames is List) {
+        names = rawNames
+            .whereType<String>()
+            .map((String name) => name.trim())
+            .where(
+              (String name) => name.isNotEmpty && name != 'Nothing selected',
+            )
+            .toSet()
+            .toList();
+      }
+
+      if (names.isEmpty) {
+        final dynamic rawName = payload['name'];
+        final String singleName = rawName is String ? rawName.trim() : '';
+        if (singleName.isNotEmpty && singleName != 'Nothing selected') {
+          names = <String>[singleName];
+        }
+      }
+
+      widget.onSelectionChanged?.call(names);
+
       final dynamic rawName = payload['name'];
-      final String name = rawName is String ? rawName.trim() : '';
-      widget.onPartSelected(name.isEmpty ? '(unnamed part)' : name);
+      final String legacyName = rawName is String ? rawName.trim() : '';
+      final String fallbackName = names.isEmpty
+          ? 'Nothing selected'
+          : names.join(', ');
+      widget.onPartSelected?.call(
+        legacyName.isNotEmpty ? legacyName : fallbackName,
+      );
     }
   }
 

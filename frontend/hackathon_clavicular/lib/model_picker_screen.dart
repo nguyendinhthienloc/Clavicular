@@ -20,13 +20,14 @@ class ModelPickerScreen extends StatefulWidget {
 
 class _ModelPickerScreenState extends State<ModelPickerScreen>
     with SingleTickerProviderStateMixin {
-  String selectedPart = 'Nothing selected';
+  List<String> selectedBodyParts = <String>[];
   String _selectedViewport = 'chat';
+  String _injectedDiagnosisMessage = '';
+  int _injectedDiagnosisVersion = 0;
   AnimationController? _gradientController;
 
-  bool _hasSelectedBodyPart(String partName) {
-    final String normalized = partName.trim();
-    return normalized.isNotEmpty && normalized != 'Nothing selected';
+  bool _hasSelectedBodyPart(List<String>? partNames) {
+    return (partNames ?? const <String>[]).isNotEmpty;
   }
 
   @override
@@ -180,10 +181,12 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                               ),
                               child: ThreeModelView(
                                 isDarkMode: isDarkMode,
-                                onPartSelected: (partName) {
+                                onSelectionChanged: (List<String>? partNames) {
+                                  final List<String> resolvedParts =
+                                      partNames ?? <String>[];
                                   setState(() {
-                                    selectedPart = partName;
-                                    if (_hasSelectedBodyPart(partName)) {
+                                    selectedBodyParts = resolvedParts;
+                                    if (_hasSelectedBodyPart(resolvedParts)) {
                                       _selectedViewport = 'diagnosis';
                                     } else {
                                       _selectedViewport = 'chat';
@@ -207,11 +210,18 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                             child: _selectedViewport == 'diagnosis'
                                 ? ViewportDiagnosis(
                                     isDarkMode: isDarkMode,
-                                    selectedPart: selectedPart,
+                                    selectedBodyParts: selectedBodyParts,
                                     selectedViewport: _selectedViewport,
                                     onViewportChanged: (String value) {
                                       setState(() {
                                         _selectedViewport = value;
+                                      });
+                                    },
+                                    onDiagnosisReady: (String message) {
+                                      setState(() {
+                                        _injectedDiagnosisMessage = message;
+                                        _injectedDiagnosisVersion++;
+                                        _selectedViewport = 'chat';
                                       });
                                     },
                                   )
@@ -219,6 +229,10 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                                     isDarkMode: isDarkMode,
                                     onThemeChanged: widget.onThemeChanged,
                                     selectedViewport: _selectedViewport,
+                                    injectedAssistantMessage:
+                                        _injectedDiagnosisMessage,
+                                    injectedAssistantVersion:
+                                        _injectedDiagnosisVersion,
                                     onViewportChanged: (String value) {
                                       setState(() {
                                         _selectedViewport = value;
