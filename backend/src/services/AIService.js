@@ -1,6 +1,6 @@
 import config from '../config/config.js'
 import ServiceResponse from '../helper/ServiceResponse.js';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Language } from '@google/genai';
 import axios from 'axios';
 import OpenAI from 'openai'
 const client = new OpenAI({
@@ -10,6 +10,7 @@ const client = new OpenAI({
 class AIService {
 	constructor() {
 		this.locAIBaseURL = config.locAI.baseURL;
+		this.history = [];
 	}
 
 	async sendPrompt(prompt, model = 'gemini-flash-latest') {
@@ -130,6 +131,38 @@ class AIService {
 				lat: lat,
 				lng: lng
 			});
+			const response = new ServiceResponse(
+				true,
+				200,
+				"Success",
+				res.data.results
+			);
+			return response;
+		} catch (err) {
+			const response = new ServiceResponse(
+				false,
+				502,
+				"Something went wrong",
+				err.toString()
+			);
+			return response;
+		}
+	}
+
+	async chat(message) {
+		try {
+			const res = await axios.post(`${this.locAIBaseURL}/api/chat`, {
+				language: "en",
+				message: message,
+				history: this.history
+			});
+			const response = new ServiceResponse(
+				true,
+				200,
+				"Success",
+				res.data.text
+			);
+			return response;
 		} catch (err) {
 			const response = new ServiceResponse(
 				false,
