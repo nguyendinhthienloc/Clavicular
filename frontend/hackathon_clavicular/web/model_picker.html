@@ -4,13 +4,15 @@
     <meta charset="UTF-8" />
     <title>Model Picker</title>
     <style>
+      @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap');
+
       html,
       body {
         margin: 0;
         width: 100%;
         height: 100%;
         overflow: hidden;
-        font-family: sans-serif;
+        font-family: 'Montserrat', sans-serif;
       }
 
       body {
@@ -59,6 +61,23 @@
         text-align: right;
       }
 
+      #instructions .instructions-title {
+        margin: 0 0 8px 0;
+        font-size: 18px;
+        font-weight: 800;
+        line-height: 1.2;
+      }
+
+      #instructions .instruction-line {
+        margin: 0;
+        line-height: 1.3;
+        white-space: normal;
+      }
+
+      #instructions .instruction-line + .instruction-line {
+        margin-top: 2px;
+      }
+
       canvas {
         display: block;
       }
@@ -68,10 +87,11 @@
     <div id="app">
       <div id="status">Booting viewer...</div>
       <div id="instructions">
-        <div class="instruction-line">Right click + scroll - Move around
-          Left click - Select single
-          Shift + left click - Select multiple
-          Space - Paint</div>
+        <div class="instructions-title">Controls guide:</div>
+        <div class="instruction-line">Right click + scroll - Move around</div>
+        <div class="instruction-line">Left click - Select single</div>
+        <div class="instruction-line">Shift + left click - Select multiple</div>
+        <div class="instruction-line">Space - Paint</div>
       </div>
     </div>
 
@@ -544,12 +564,3 @@
     </script>
   </body>
 </html>
-      #instructions .instruction-line {
-        margin: 0;
-        line-height: 1.2;
-        white-space: nowrap;
-      }
-
-      #instructions .instruction-line + .instruction-line {
-        margin-top: 4px;
-      }

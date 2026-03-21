@@ -52,10 +52,9 @@ class _ThreeModelViewState extends State<ThreeModelView> {
     }
 
     if (payload['type'] == 'part-selected') {
-      final String? name = (payload['name'] as String?)?.trim();
-      widget.onPartSelected(
-        (name == null || name.isEmpty) ? '(unnamed part)' : name,
-      );
+      final dynamic rawName = payload['name'];
+      final String name = rawName is String ? rawName.trim() : '';
+      widget.onPartSelected(name.isEmpty ? '(unnamed part)' : name);
     }
   }
 
@@ -92,12 +91,10 @@ class _ThreeModelViewState extends State<ThreeModelView> {
       return;
     }
 
-    final String message = jsonEncode(
-      <String, dynamic>{
-        'type': 'theme-changed',
-        'mode': isDarkMode ? 'dark' : 'light',
-      },
-    );
+    final String message = jsonEncode(<String, dynamic>{
+      'type': 'theme-changed',
+      'mode': isDarkMode ? 'dark' : 'light',
+    });
 
     target.postMessage(message, '*');
   }

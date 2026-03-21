@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hackathon_clavicular/viewport_model.dart';
 import 'package:hackathon_clavicular/viewport_chat.dart';
 import 'package:hackathon_clavicular/config/app_config.dart';
+
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -11,6 +12,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   bool _isDarkMode = true;
+  String _selectedViewport = 'chat';
 
   void _showSettingsMenu(BuildContext context) {
     showMenu<String>(
@@ -57,16 +59,8 @@ class _MainScreenState extends State<MainScreen> {
             width: 80,
             color: Colors.grey.shade800,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.home, color: Colors.white),
-                  onPressed: () {},
-                ),
-                IconButton(
-                  icon: const Icon(Icons.search, color: Colors.white),
-                  onPressed: () {},
-                ),
                 IconButton(
                   icon: const Icon(Icons.settings, color: Colors.white),
                   onPressed: () => _showSettingsMenu(context),
@@ -84,6 +78,12 @@ class _MainScreenState extends State<MainScreen> {
                   Expanded(
                     child: ViewportChat(
                       isDarkMode: _isDarkMode,
+                      selectedViewport: _selectedViewport,
+                      onViewportChanged: (String value) {
+                        setState(() {
+                          _selectedViewport = value;
+                        });
+                      },
                       onThemeChanged: (bool value) {
                         setState(() {
                           _isDarkMode = value;

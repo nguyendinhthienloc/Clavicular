@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hackathon_clavicular/config/app_config.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'model_picker_screen.dart';
 
 void main() async {
@@ -35,6 +36,7 @@ class _MyAppState extends State<MyApp> {
         scaffoldBackgroundColor: const Color(0xFFF4F6F8),
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2563EB)),
         useMaterial3: true,
+        textTheme: GoogleFonts.montserratTextTheme(),
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
@@ -44,6 +46,7 @@ class _MyAppState extends State<MyApp> {
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
+        textTheme: GoogleFonts.montserratTextTheme(ThemeData.dark().textTheme),
       ),
       themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
       home: ModelPickerScreen(

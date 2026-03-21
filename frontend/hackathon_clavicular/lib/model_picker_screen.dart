@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'three_model_view.dart';
 import 'viewport_chat.dart';
 import 'viewport_diagnosis.dart';
@@ -17,11 +18,31 @@ class ModelPickerScreen extends StatefulWidget {
   State<ModelPickerScreen> createState() => _ModelPickerScreenState();
 }
 
-class _ModelPickerScreenState extends State<ModelPickerScreen> {
+class _ModelPickerScreenState extends State<ModelPickerScreen>
+    with SingleTickerProviderStateMixin {
   String selectedPart = 'Nothing selected';
+  String _selectedViewport = 'chat';
+  AnimationController? _gradientController;
 
-  bool get _isPartSelected =>
-      selectedPart.trim().isNotEmpty && selectedPart != 'Nothing selected';
+  bool _hasSelectedBodyPart(String partName) {
+    final String normalized = partName.trim();
+    return normalized.isNotEmpty && normalized != 'Nothing selected';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _gradientController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 14),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _gradientController?.dispose();
+    super.dispose();
+  }
 
   void _showSettingsSheet() {
     final bool isDarkMode = widget.isDarkMode;
@@ -48,7 +69,7 @@ class _ModelPickerScreenState extends State<ModelPickerScreen> {
                     const SizedBox(width: 10),
                     Text(
                       'Theme',
-                      style: TextStyle(
+                      style: GoogleFonts.montserrat(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: isDarkMode
@@ -76,10 +97,15 @@ class _ModelPickerScreenState extends State<ModelPickerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _gradientController ??= AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 14),
+    )..repeat();
+
     final bool isDarkMode = widget.isDarkMode;
     final Color backgroundColor = isDarkMode
-        ? const Color(0xFF0E1117)
-        : const Color(0xFFF4F6F8);
+        ? const Color(0xFF0A0E15)
+        : const Color(0xFFE9EEF7);
     final Color sidebarColor = isDarkMode
         ? const Color(0xFF161B25)
         : Colors.white;
@@ -90,6 +116,19 @@ class _ModelPickerScreenState extends State<ModelPickerScreen> {
     final Color frameBackground = isDarkMode
         ? const Color(0xFF1F1F1F)
         : const Color(0xFFF4F6F8);
+    final List<Color> outlineColors = isDarkMode
+        ? const [Color(0xFF60A5FA), Color(0xFF1D4ED8)]
+        : const [Color(0xFF93C5FD), Color(0xFF2563EB)];
+    final List<BoxShadow> viewportShadow = [
+      BoxShadow(
+        color: isDarkMode
+            ? Colors.black.withValues(alpha: 0.55)
+            : const Color(0xFF1F2937).withValues(alpha: 0.18),
+        blurRadius: 22,
+        spreadRadius: 1,
+        offset: const Offset(0, 10),
+      ),
+    ];
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -100,14 +139,7 @@ class _ModelPickerScreenState extends State<ModelPickerScreen> {
             color: sidebarColor,
             child: Column(
               children: [
-                IconButton(
-                  icon: Icon(Icons.home, color: iconColor),
-                  onPressed: () {},
-                ),
-                IconButton(
-                  icon: Icon(Icons.search, color: iconColor),
-                  onPressed: () {},
-                ),
+                const Spacer(),
                 IconButton(
                   icon: Icon(Icons.settings, color: iconColor),
                   onPressed: _showSettingsSheet,
@@ -118,39 +150,87 @@ class _ModelPickerScreenState extends State<ModelPickerScreen> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      clipBehavior: Clip.antiAlias,
-                      decoration: BoxDecoration(
-                        color: frameBackground,
-                        border: Border.all(color: frameColor),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: ThreeModelView(
-                        isDarkMode: isDarkMode,
-                        onPartSelected: (partName) {
-                          setState(() {
-                            selectedPart = partName;
-                          });
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _isPartSelected
-                        ? ViewportDiagnosis(
-                            isDarkMode: isDarkMode,
-                            selectedPart: selectedPart,
-                          )
-                        : ViewportChat(
-                            isDarkMode: isDarkMode,
-                            onThemeChanged: widget.onThemeChanged,
+              child: AnimatedBuilder(
+                animation: _gradientController!,
+                builder: (context, child) {
+                  final double shift = -1 + (_gradientController!.value * 2);
+                  final LinearGradient animatedOutlineGradient = LinearGradient(
+                    begin: Alignment(-1 + shift, 0),
+                    end: Alignment(1 + shift, 0),
+                    colors: outlineColors,
+                  );
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: Transform.translate(
+                          offset: const Offset(0, -4),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              gradient: animatedOutlineGradient,
+                              boxShadow: viewportShadow,
+                            ),
+                            child: Container(
+                              margin: const EdgeInsets.all(1.4),
+                              clipBehavior: Clip.antiAlias,
+                              decoration: BoxDecoration(
+                                color: frameBackground,
+                                border: Border.all(color: frameColor),
+                                borderRadius: BorderRadius.circular(14.6),
+                              ),
+                              child: ThreeModelView(
+                                isDarkMode: isDarkMode,
+                                onPartSelected: (partName) {
+                                  setState(() {
+                                    selectedPart = partName;
+                                    if (_hasSelectedBodyPart(partName)) {
+                                      _selectedViewport = 'diagnosis';
+                                    } else {
+                                      _selectedViewport = 'chat';
+                                    }
+                                  });
+                                },
+                              ),
+                            ),
                           ),
-                  ),
-                ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Transform.translate(
+                          offset: const Offset(0, -4),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: viewportShadow,
+                            ),
+                            child: _selectedViewport == 'diagnosis'
+                                ? ViewportDiagnosis(
+                                    isDarkMode: isDarkMode,
+                                    selectedPart: selectedPart,
+                                    selectedViewport: _selectedViewport,
+                                    onViewportChanged: (String value) {
+                                      setState(() {
+                                        _selectedViewport = value;
+                                      });
+                                    },
+                                  )
+                                : ViewportChat(
+                                    isDarkMode: isDarkMode,
+                                    onThemeChanged: widget.onThemeChanged,
+                                    selectedViewport: _selectedViewport,
+                                    onViewportChanged: (String value) {
+                                      setState(() {
+                                        _selectedViewport = value;
+                                      });
+                                    },
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ),

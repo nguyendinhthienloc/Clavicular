@@ -8,19 +8,25 @@ class ViewportChat extends StatefulWidget {
     super.key,
     required this.isDarkMode,
     required this.onThemeChanged,
+    required this.selectedViewport,
+    required this.onViewportChanged,
   });
 
   final bool isDarkMode;
   final ValueChanged<bool> onThemeChanged;
+  final String selectedViewport;
+  final ValueChanged<String> onViewportChanged;
 
   @override
   State<ViewportChat> createState() => _ViewportChatState();
 }
 
-class _ViewportChatState extends State<ViewportChat> {
+class _ViewportChatState extends State<ViewportChat>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final List<_ChatMessage> _messages = [];
   late final Dio _dio;
+  AnimationController? _gradientController;
   bool _isTyping = false;
   bool _hasSentFirstMessage = false;
   bool _isLoading = false;
@@ -30,6 +36,10 @@ class _ViewportChatState extends State<ViewportChat> {
     super.initState();
     _controller.addListener(_handleTypingState);
     _dio = Dio();
+    _gradientController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 14),
+    )..repeat();
   }
 
   void _handleTypingState() {
@@ -79,9 +89,6 @@ class _ViewportChatState extends State<ViewportChat> {
           try {
             final Map<String, dynamic> responseData =
                 response.data as Map<String, dynamic>;
-
-            // Debug: Log the actual response
-            print('API Response: $responseData');
 
             // Extract from data field first
             final dynamic dataField = responseData['payload'];
@@ -159,11 +166,17 @@ class _ViewportChatState extends State<ViewportChat> {
   void dispose() {
     _controller.removeListener(_handleTypingState);
     _controller.dispose();
+    _gradientController?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    _gradientController ??= AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 14),
+    )..repeat();
+
     final bool isDarkMode = widget.isDarkMode;
     final bool hasMessages = _messages.isNotEmpty;
     final Color viewportBackground = isDarkMode
@@ -190,9 +203,6 @@ class _ViewportChatState extends State<ViewportChat> {
     final Color composerBackground = isDarkMode
         ? const Color(0xFF2A2A2A)
         : const Color(0xFFFFFFFF);
-    final Color composerBorder = isDarkMode
-        ? const Color(0xFF454545)
-        : const Color(0xFFD1D5DB);
     final Color inputTextColor = isDarkMode
         ? const Color(0xFFE3E3E3)
         : const Color(0xFF111827);
@@ -205,203 +215,283 @@ class _ViewportChatState extends State<ViewportChat> {
     final Color footerTextColor = isDarkMode
         ? const Color(0xFFC8C8C8)
         : const Color(0xFF6B7280);
+    final Color dropdownText = isDarkMode
+        ? const Color(0xFFEAF1FF)
+        : Colors.white;
+    final String viewportValue =
+        (widget.selectedViewport == 'chat' ||
+            widget.selectedViewport == 'diagnosis')
+        ? widget.selectedViewport
+        : 'chat';
+    final List<Color> outlineColors = isDarkMode
+        ? const [Color(0xFF60A5FA), Color(0xFF1D4ED8)]
+        : const [Color(0xFF93C5FD), Color(0xFF2563EB)];
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        decoration: BoxDecoration(
-          color: viewportBackground,
-          border: Border.all(color: viewportBorder),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Scaffold(
-          backgroundColor: viewportBackground,
-          body: Column(
-            children: [
-              Expanded(
-                child: Stack(
+    return AnimatedBuilder(
+      animation: _gradientController!,
+      builder: (context, child) {
+        final double shift = -1 + (_gradientController!.value * 2);
+        final LinearGradient animatedOutlineGradient = LinearGradient(
+          begin: Alignment(-1 + shift, 0),
+          end: Alignment(1 + shift, 0),
+          colors: outlineColors,
+        );
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: animatedOutlineGradient,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Container(
+              margin: const EdgeInsets.all(1.4),
+              decoration: BoxDecoration(
+                color: viewportBackground,
+                border: Border.all(color: viewportBorder),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Scaffold(
+                backgroundColor: viewportBackground,
+                body: Column(
                   children: [
-                    if (hasMessages)
-                      ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _messages.length + (_isLoading ? 1 : 0),
-                        itemBuilder: (BuildContext context, int index) {
-                          if (_isLoading && index == _messages.length) {
-                            return Align(
-                              alignment: Alignment.centerLeft,
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(vertical: 6),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 10,
-                                ),
-                                constraints: const BoxConstraints(
-                                  maxWidth: 420,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: bubbleAssistant,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: bubbleBorder),
-                                ),
-                                child: SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      bodyTextColor,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }
-                          final _ChatMessage message = _messages[index];
-                          return Align(
-                            alignment: message.isUser
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 6),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 10,
-                              ),
-                              constraints: const BoxConstraints(maxWidth: 420),
-                              decoration: BoxDecoration(
-                                color: message.isUser
-                                    ? bubbleUser
-                                    : bubbleAssistant,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: bubbleBorder),
-                              ),
-                              child: Text(
-                                message.text,
-                                style: GoogleFonts.montserrat(
-                                  color: bodyTextColor,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    IgnorePointer(
-                      child: Center(
-                        child: AnimatedSlide(
-                          duration: const Duration(milliseconds: 450),
-                          curve: Curves.easeInOut,
-                          offset: Offset(
-                            0.0,
-                            _hasSentFirstMessage
-                                ? -1.2
-                                : _isTyping
-                                ? -0.25
-                                : 0.0,
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                      child: Align(
+                        alignment: Alignment.topLeft,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: animatedOutlineGradient,
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          child: AnimatedOpacity(
-                            duration: const Duration(milliseconds: 450),
-                            curve: Curves.easeInOut,
-                            opacity: _hasSentFirstMessage ? 0 : 1,
-                            child: Padding(
-                              padding: const EdgeInsets.only(top: 24),
-                              child: Text(
-                                'clavicular',
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 2,
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: viewportValue,
+                                iconEnabledColor: dropdownText,
+                                dropdownColor: isDarkMode
+                                    ? const Color(0xFF0E1B38)
+                                    : const Color(0xFF2563EB),
                                 style: GoogleFonts.montserrat(
-                                  color: heroTextColor,
-                                  fontSize: 52,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 0.5,
+                                  color: dropdownText,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 18,
                                 ),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'chat',
+                                    child: Text('chat'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'diagnosis',
+                                    child: Text('diagnosis'),
+                                  ),
+                                ],
+                                onChanged: (String? value) {
+                                  if (value == null) return;
+                                  widget.onViewportChanged(value);
+                                },
                               ),
                             ),
                           ),
                         ),
                       ),
                     ),
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          if (hasMessages)
+                            ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount:
+                                  _messages.length + (_isLoading ? 1 : 0),
+                              itemBuilder: (BuildContext context, int index) {
+                                if (_isLoading && index == _messages.length) {
+                                  return Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(
+                                        vertical: 6,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 10,
+                                      ),
+                                      constraints: const BoxConstraints(
+                                        maxWidth: 420,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: bubbleAssistant,
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(color: bubbleBorder),
+                                      ),
+                                      child: SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                bodyTextColor,
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }
+                                final _ChatMessage message = _messages[index];
+                                return Align(
+                                  alignment: message.isUser
+                                      ? Alignment.centerRight
+                                      : Alignment.centerLeft,
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(
+                                      vertical: 6,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 10,
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 420,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: message.isUser
+                                          ? bubbleUser
+                                          : bubbleAssistant,
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(color: bubbleBorder),
+                                    ),
+                                    child: Text(
+                                      message.text,
+                                      style: GoogleFonts.montserrat(
+                                        color: bodyTextColor,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          if (!hasMessages)
+                            IgnorePointer(
+                              child: Center(
+                                child: AnimatedOpacity(
+                                  duration: const Duration(milliseconds: 250),
+                                  opacity: _isTyping ? 0.35 : 0.5,
+                                  child: Text(
+                                    'Start a conversation',
+                                    style: GoogleFonts.montserrat(
+                                      color: heroTextColor,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 14),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              height: 110,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(26),
+                                gradient: animatedOutlineGradient,
+                              ),
+                              child: Container(
+                                margin: const EdgeInsets.all(1.4),
+                                decoration: BoxDecoration(
+                                  color: composerBackground,
+                                  borderRadius: BorderRadius.circular(24.6),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    18,
+                                    20,
+                                    12,
+                                    20,
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.add,
+                                        color: controlIconColor,
+                                        size: 30,
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: TextField(
+                                          controller: _controller,
+                                          maxLines: 1,
+                                          textInputAction: TextInputAction.send,
+                                          style: GoogleFonts.montserrat(
+                                            color: inputTextColor,
+                                            fontSize: 16,
+                                          ),
+                                          decoration: InputDecoration(
+                                            hintText:
+                                                'How can I help you today?',
+                                            hintStyle: GoogleFonts.montserrat(
+                                              color: inputHintColor,
+                                              fontSize: 18,
+                                            ),
+                                            border: InputBorder.none,
+                                          ),
+                                          onSubmitted: (_) => _sendMessage(),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      IconButton(
+                                        onPressed: _sendMessage,
+                                        icon: Icon(
+                                          Icons.send_rounded,
+                                          color: controlIconColor,
+                                          size: 28,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 10),
+                                child: Text(
+                                  'Connect your tools to Assistant',
+                                  style: GoogleFonts.montserrat(
+                                    color: footerTextColor,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 14),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        height: 110,
-                        decoration: BoxDecoration(
-                          color: composerBackground,
-                          borderRadius: BorderRadius.circular(26),
-                          border: Border.all(color: composerBorder),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(18, 20, 12, 20),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.add,
-                                color: controlIconColor,
-                                size: 30,
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: TextField(
-                                  controller: _controller,
-                                  maxLines: 1,
-                                  textInputAction: TextInputAction.send,
-                                  style: GoogleFonts.montserrat(
-                                    color: inputTextColor,
-                                    fontSize: 16,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: 'How can I help you today?',
-                                    hintStyle: GoogleFonts.montserrat(
-                                      color: inputHintColor,
-                                      fontSize: 18,
-                                    ),
-                                    border: InputBorder.none,
-                                  ),
-                                  onSubmitted: (_) => _sendMessage(),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              IconButton(
-                                onPressed: _sendMessage,
-                                icon: Icon(
-                                  Icons.send_rounded,
-                                  color: controlIconColor,
-                                  size: 28,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 10),
-                          child: Text(
-                            'Connect your tools to Assistant',
-                            style: GoogleFonts.montserrat(
-                              color: footerTextColor,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
