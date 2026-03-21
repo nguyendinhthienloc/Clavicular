@@ -244,8 +244,70 @@
 
           const raycaster = new THREE.Raycaster();
           const mouse = new THREE.Vector2();
+          const pointerAim = { x: 0, y: 0 };
+          const pointerAimSmooth = { x: 0, y: 0 };
+          const MAX_EYE_SHIFT = 0.007;
+          const EYE_Y_OFFSET = -0.0015;
 
           let pickableMeshes = [];
+          let eyeMeshes = [];
+
+          function resetEyeMeshes() {
+            eyeMeshes = [];
+            pointerAimSmooth.x = pointerAim.x;
+            pointerAimSmooth.y = pointerAim.y;
+          }
+
+            function registerEyeMesh(mesh) {
+              if (!mesh.geometry) {
+                return;
+              }
+
+              if (!mesh.userData.eyeGeometryCloned) {
+                mesh.geometry = mesh.geometry.clone();
+                mesh.userData.eyeGeometryCloned = true;
+              }
+
+              if (!mesh.geometry.boundingBox) {
+                mesh.geometry.computeBoundingBox();
+              }
+              const bbox = mesh.geometry.boundingBox;
+              if (!bbox) {
+                return;
+              }
+
+              const parent = mesh.parent;
+              if (!parent) {
+                return;
+              }
+
+              const localCenter = bbox.getCenter(new THREE.Vector3());
+              const worldCenter = mesh.localToWorld(localCenter.clone());
+              const parentCenter = parent.worldToLocal(worldCenter.clone());
+
+              const pivot = new THREE.Object3D();
+              pivot.name = `${mesh.name}_pivot`;
+              parent.add(pivot);
+              pivot.position.copy(parentCenter);
+              pivot.rotation.copy(mesh.rotation);
+              pivot.scale.copy(mesh.scale);
+
+              parent.remove(mesh);
+              mesh.geometry.translate(-localCenter.x, -localCenter.y, -localCenter.z);
+              pivot.add(mesh);
+
+              mesh.position.set(0, 0, 0);
+              mesh.rotation.set(0, 0, 0);
+              mesh.scale.set(1, 1, 1);
+
+              pivot.userData.eyeBaseOffset = mesh.position.clone();
+
+              if (!pivot.userData.eyeBaseRotation) {
+                pivot.userData.eyeBaseRotation = pivot.rotation.clone();
+              }
+
+              eyeMeshes.push(pivot);
+          }
           const selectedMeshes = new Set();
           let isShiftMultiSelect = false;
           let isHoverSelectHeld = false;
@@ -441,11 +503,18 @@
                 camera.lookAt(0, 0, 0);
 
                 pickableMeshes = [];
+                resetEyeMeshes();
+                const eyeCandidates = [];
                 model.traverse(function (obj) {
                   if (obj.isMesh) {
                     pickableMeshes.push(obj);
+                    const lname = (obj.name || '').toLowerCase();
+                    if (lname.includes('cornea')) {
+                      eyeCandidates.push(obj);
+                    }
                   }
                 });
+                eyeCandidates.forEach(registerEyeMesh);
               },
               undefined,
               function (error) {
@@ -467,16 +536,21 @@
           }
 
           function updatePointerFromEvent(event) {
+            if (!event || event.clientX === undefined || event.clientY === undefined) {
+              return;
+            }
             const rect = renderer.domElement.getBoundingClientRect();
             mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
             mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            pointerAim.x = THREE.MathUtils.clamp(mouse.x, -1, 1);
+            pointerAim.y = THREE.MathUtils.clamp(mouse.y, -1, 1);
           }
 
           function handlePointerMove(event) {
+            updatePointerFromEvent(event);
             if (!isHoverSelectHeld) {
               return;
             }
-            updatePointerFromEvent(event);
             raycaster.setFromCamera(mouse, camera);
             const hits = raycaster.intersectObjects(pickableMeshes, true);
             if (hits.length === 0) {
@@ -616,7 +690,49 @@
           function animate() {
             requestAnimationFrame(animate);
             controls.update();
+            updateEyeTracking();
             renderer.render(scene, camera);
+          }
+
+          function updateEyeTracking() {
+            pointerAimSmooth.x = THREE.MathUtils.lerp(
+              pointerAimSmooth.x,
+              pointerAim.x,
+              0.12
+            );
+
+            for (const pivot of eyeMeshes) {
+              const baseRot = pivot.userData.eyeBaseRotation;
+              const baseOffset = pivot.userData.eyeBaseOffset ?? new THREE.Vector3();
+              if (!baseRot) {
+                continue;
+              }
+
+              pivot.rotation.x = THREE.MathUtils.lerp(
+                pivot.rotation.x,
+                baseRot.x,
+                0.2
+              );
+              pivot.rotation.y = THREE.MathUtils.lerp(
+                pivot.rotation.y,
+                baseRot.y,
+                0.2
+              );
+              pivot.rotation.z = THREE.MathUtils.lerp(
+                pivot.rotation.z,
+                baseRot.z,
+                0.2
+              );
+
+              const shift = pointerAimSmooth.x * MAX_EYE_SHIFT;
+              for (const child of pivot.children) {
+                child.position.set(
+                  baseOffset.x + shift,
+                  baseOffset.y + EYE_Y_OFFSET,
+                  baseOffset.z
+                );
+              }
+            }
           }
 
           renderer.domElement.addEventListener('mousemove', handlePointerMove);
