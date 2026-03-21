@@ -1,0 +1,783 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Person 3 Mock UI</title>
+  <style>
+    :root {
+      --bg-1: #fefaf3;
+      --bg-2: #f6efe3;
+      --ink: #1f2a37;
+      --muted: #576173;
+      --brand: #0f766e;
+      --brand-2: #14b8a6;
+      --warning: #b45309;
+      --card: rgba(255, 255, 255, 0.9);
+      --ring: rgba(15, 118, 110, 0.2);
+      --border: #e8dcc8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 15%, #ffe8d5 0, transparent 38%),
+        radial-gradient(circle at 85% 10%, #d5f6ef 0, transparent 35%),
+        linear-gradient(140deg, var(--bg-1), var(--bg-2));
+      min-height: 100vh;
+      padding: 18px;
+    }
+
+    .app {
+      max-width: 980px;
+      margin: 0 auto;
+      animation: rise 0.5s ease-out;
+    }
+
+    .hero {
+      background: linear-gradient(120deg, #0f766e, #0b5f58);
+      color: #f5fffd;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 12px 28px rgba(13, 44, 41, 0.24);
+      margin-bottom: 14px;
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 1.5rem;
+      letter-spacing: 0.2px;
+    }
+
+    .hero p {
+      margin: 0;
+      color: #d9fcf8;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 8px 20px rgba(20, 40, 60, 0.08);
+      backdrop-filter: blur(4px);
+    }
+
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 1.08rem;
+    }
+
+    .row {
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: inline-block;
+      margin-bottom: 6px;
+      font-weight: 700;
+      color: #233447;
+    }
+
+    textarea,
+    input,
+    select {
+      width: 100%;
+      border: 1px solid #d7ccb9;
+      background: #fffdfa;
+      color: var(--ink);
+      border-radius: 10px;
+      padding: 10px 12px;
+      outline: none;
+      font-size: 14px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    textarea:focus,
+    input:focus,
+    select:focus {
+      border-color: var(--brand-2);
+      box-shadow: 0 0 0 4px var(--ring);
+    }
+
+    .button-row,
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .helper {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.08s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary {
+      background: linear-gradient(120deg, var(--brand), #0d5f58);
+      color: #f1fffd;
+      box-shadow: 0 5px 12px rgba(15, 118, 110, 0.24);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(120deg, #1d4ed8, #1e40af);
+      color: #eff6ff;
+      box-shadow: 0 5px 12px rgba(37, 99, 235, 0.22);
+    }
+
+    .btn-muted {
+      background: #ece7dd;
+      color: #334155;
+    }
+
+    .chip {
+      background: #fff9ed;
+      border: 1px solid #f1dcc0;
+      color: #744210;
+      font-weight: 600;
+      font-size: 13px;
+      padding: 8px 11px;
+      border-radius: 999px;
+    }
+
+    pre {
+      margin: 0;
+      background: #16202f;
+      color: #d7f0ff;
+      border-radius: 12px;
+      padding: 14px;
+      overflow: auto;
+      line-height: 1.45;
+      min-height: 170px;
+    }
+
+    .tip {
+      margin-top: 8px;
+      color: var(--warning);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .result-box {
+      border: 1px solid #d7ccb9;
+      background: #fffdf9;
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .result-box h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .result-box p {
+      margin: 6px 0;
+      color: #243446;
+    }
+
+    .result-box ul {
+      margin: 8px 0 0 18px;
+      padding: 0;
+    }
+
+    .result-box a {
+      color: #1d4ed8;
+      text-decoration: none;
+    }
+
+    .result-box a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 700px) {
+      body { padding: 10px; }
+      .hero { padding: 16px; }
+      .card { padding: 12px; }
+      .hero h1 { font-size: 1.3rem; }
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="hero">
+      <h1>Person 3 AI Server Demo</h1>
+      <p>Backend base URL: <strong id="baseLabel">http://localhost:8016</strong></p>
+    </section>
+
+    <section class="card">
+      <h2>Server Connection</h2>
+      <div class="row">
+        <label for="baseUrl">Base URL</label>
+        <input id="baseUrl" value="http://localhost:8016" />
+        <div class="chips" aria-label="connection presets">
+          <button class="chip" type="button" id="useLocalBtn">Use Localhost</button>
+          <button class="chip" type="button" id="useHostBtn">Use This Device Host</button>
+        </div>
+        <p class="helper">Tip: friends on the same Wi-Fi should use this device host.</p>
+      </div>
+      <div class="button-row">
+        <button id="healthBtn" class="btn-primary">Test Server Connection</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Diagnosis Test</h2>
+      <div class="row">
+        <label for="lang">Language</label>
+        <select id="lang">
+          <option value="en">en</option>
+          <option value="vi">vi</option>
+        </select>
+      </div>
+
+      <div class="chips" aria-label="sample prompts">
+        <button class="chip" type="button" data-sample="chest">Sample: Emergency chest pain</button>
+        <button class="chip" type="button" data-sample="headache">Sample: Mild headache</button>
+        <button class="chip" type="button" data-sample="throat">Sample: Sore throat (VI)</button>
+      </div>
+
+      <div class="row">
+        <label for="message">Diagnose Prompt</label>
+        <textarea id="message">Body region: Chest
+Pain type: pressure
+Duration: 30 minutes
+Severity: 9
+Other: left arm pain</textarea>
+      </div>
+
+      <div class="row">
+        <label for="regionName">Region name (optional, overrides prompt)</label>
+        <input id="regionName" placeholder="Deltoid_L" />
+      </div>
+
+      <div class="row">
+        <label>Location (optional for nearby clinics)</label>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <input id="lat" type="number" step="any" placeholder="Latitude e.g. 10.7295" value="10.7295" />
+          <input id="lng" type="number" step="any" placeholder="Longitude e.g. 106.7228" value="106.7228" />
+        </div>
+        <div class="chips" aria-label="location presets">
+          <button class="chip" type="button" id="setVngBtn">VNG District 7</button>
+          <button class="chip" type="button" id="useGeoBtn">Use My Location</button>
+        </div>
+        <p class="helper">Use "My Location" to auto-fill coordinates for nearest clinic search.</p>
+      </div>
+
+      <div class="button-row">
+        <button id="runAllBtn" class="btn-secondary">Run Full AI Check</button>
+        <button id="diagnoseBtn" class="btn-primary">Analyze Symptoms</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Sources Test</h2>
+      <div class="row">
+        <label for="query">Medical query</label>
+        <input id="query" value="chest pain warning signs" />
+      </div>
+      <div class="button-row">
+        <button id="sourcesBtn" class="btn-secondary">Find Trusted Sources</button>
+      </div>
+      <p class="tip">Tip: use short symptom topics for faster, cleaner source results.</p>
+    </section>
+
+    <section class="card">
+      <h2>AI Wrapper Output</h2>
+      <div class="result-grid">
+        <div class="result-box">
+          <h3>OpenRouter Medical Summary</h3>
+          <div id="aiText">Run a diagnosis to see readable AI summary text here.</div>
+        </div>
+        <div class="result-box">
+          <h3>Exa Trusted Source URLs</h3>
+          <ul id="sourceList">
+            <li>No source links yet.</li>
+          </ul>
+        </div>
+        <div class="result-box">
+          <h3>Nearby Clinics (Foursquare)</h3>
+          <ul id="clinicList">
+            <li>No clinic results yet.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="button-row" style="margin-top: 0; margin-bottom: 10px;">
+        <button id="clearBtn" class="btn-muted" type="button">Clear Output</button>
+      </div>
+      <p class="helper">Raw API JSON is shown below for debugging.</p>
+      <pre id="output">Ready.</pre>
+    </section>
+  </div>
+
+  <script>
+    const output = document.getElementById('output');
+    const aiText = document.getElementById('aiText');
+    const sourceList = document.getElementById('sourceList');
+    const clinicList = document.getElementById('clinicList');
+    const baseUrlInput = document.getElementById('baseUrl');
+    const baseLabel = document.getElementById('baseLabel');
+    const samplePrompts = {
+      chest: {
+        language: 'en',
+        text: 'Body region: Chest\nPain type: pressure\nDuration: 30 minutes\nSeverity: 9\nOther: left arm pain'
+      },
+      headache: {
+        language: 'en',
+        text: 'Body region: Head\nPain type: dull ache\nDuration: 2 hours\nSeverity: 3\nOther: no vomiting, can still work'
+      },
+      throat: {
+        language: 'vi',
+        text: 'Vung dau: Co hong\nKieu dau: rat khi nuot\nThoi gian: 2 ngay\nMuc do: 4\nKhac: sot nhe 37.8C'
+      }
+    };
+
+    function base() {
+      const url = baseUrlInput.value.trim().replace(/\/$/, '');
+      baseLabel.textContent = url;
+      return url;
+    }
+
+    function queryParam(name) {
+      const params = new URLSearchParams(window.location.search);
+      const value = params.get(name);
+      return value ? value.trim().replace(/\/$/, '') : '';
+    }
+
+    function defaultBaseFromHost() {
+      const explicitApiBase = queryParam('apiBase');
+      if (explicitApiBase) {
+        return explicitApiBase;
+      }
+
+      const host = window.location.hostname;
+      if (!host || host === 'localhost') {
+        return 'http://127.0.0.1:8016';
+      }
+      if (host === '127.0.0.1') {
+        return 'http://127.0.0.1:8016';
+      }
+
+      // Cloudflared UI tunnel and API tunnel are usually different URLs.
+      // In this case, pass ?apiBase=https://<api-tunnel>.trycloudflare.com
+      if (host.endsWith('.trycloudflare.com')) {
+        return '';
+      }
+
+      return `http://${host}:8016`;
+    }
+
+    async function callApi(path, body) {
+      try {
+        const url = base() + path;
+        console.log(`[API] ${body ? 'POST' : 'GET'} ${url}`, body || '');
+        
+        const res = await fetch(url, {
+          method: body ? 'POST' : 'GET',
+          headers: body ? { 'Content-Type': 'application/json' } : {},
+          body: body ? JSON.stringify(body) : undefined
+        });
+
+        const text = await res.text();
+        let parsed = text;
+        try { 
+          parsed = JSON.parse(text); 
+        } catch (parseErr) {
+          console.error('[API] JSON parse error:', parseErr, 'Raw:', text);
+        }
+
+        console.log(`[API] Response status: ${res.status}`, parsed);
+
+        output.textContent = JSON.stringify({
+          status: res.status,
+          ok: res.ok,
+          data: parsed
+        }, null, 2);
+
+        if (!res.ok) {
+          output.textContent = JSON.stringify({
+            status: res.status,
+            error: 'API returned error',
+            data: parsed
+          }, null, 2);
+          console.warn(`[API] HTTP ${res.status}: ${text}`);
+        }
+
+        return { res, parsed };
+      } catch (err) {
+        console.error('[API] Fetch error:', err);
+        output.textContent = JSON.stringify({
+          error: 'Network error: ' + err.message,
+          hint: 'Check browser console (F12) for details'
+        }, null, 2);
+        throw err;
+      }
+    }
+
+    function extractDiagnosis(data) {
+      if (!data || typeof data !== 'object') {
+        console.warn('[extract] Invalid data:', data);
+        return null;
+      }
+      if (data.diagnosis && typeof data.diagnosis === 'object') {
+        console.log('[extract] Found .diagnosis');
+        return data.diagnosis;
+      }
+      if (data.data && typeof data.data === 'object') {
+        console.log('[extract] Found .data');
+        return data.data;
+      }
+      console.warn('[extract] Could not extract diagnosis from:', data);
+      return null;
+    }
+
+    function extractSources(data) {
+      console.log('[extract] extractSources input:', data);
+      if (!data || typeof data !== 'object') return [];
+      
+      // Try multiple paths where sources might be
+      if (Array.isArray(data.results)) {
+        console.log('[extract] Found .results array');
+        return data.results;
+      }
+      if (Array.isArray(data.sources)) {
+        console.log('[extract] Found .sources array');
+        return data.sources;
+      }
+      if (data.data) {
+        if (Array.isArray(data.data.results)) {
+          console.log('[extract] Found .data.results array');
+          return data.data.results;
+        }
+        if (Array.isArray(data.data.sources)) {
+          console.log('[extract] Found .data.sources array');
+          return data.data.sources;
+        }
+      }
+      console.warn('[extract] Could not find sources in:', data);
+      return [];
+    }
+
+    function renderDiagnosis(data) {
+      console.log('[render] renderDiagnosis called with:', data);
+      const d = extractDiagnosis(data);
+      console.log('[render] extracted diagnosis:', d);
+      
+      if (!d) {
+        console.warn('[render] No diagnosis found in data');
+        aiText.innerHTML = '<p style="color: red;">Diagnosis response missing. Check Raw API JSON below.</p>';
+        return;
+      }
+
+      const conditions = Array.isArray(d.conditions) ? d.conditions : [];
+      console.log('[render] conditions:', conditions);
+      
+      const conditionLines = conditions
+        .map((c) => `<li><strong>${c.name || 'Condition'} (${c.likelihood || 'Unknown'})</strong>: ${c.explanation || ''}</li>`)
+        .join('');
+
+      const html = [
+        `<p><strong>Severity:</strong> ${d.severity || 'Unknown'}</p>`,
+        `<p><strong>Recommended Action:</strong> ${d.action || 'N/A'}</p>`,
+        conditionLines ? `<ul>${conditionLines}</ul>` : '<p>No condition details.</p>',
+        `<p><strong>Disclaimer:</strong> ${d.disclaimer || 'N/A'}</p>`
+      ].join('');
+      
+      console.log('[render] rendering HTML:', html);
+      aiText.innerHTML = html;
+    }
+
+    function renderSources(data) {
+      console.log('[render] renderSources called with:', data);
+      const results = extractSources(data);
+      console.log('[render] extracted sources:', results);
+      
+      if (!results || !results.length) {
+        console.warn('[render] No sources found in data');
+        sourceList.innerHTML = '<li>No source links returned.</li>';
+        return;
+      }
+
+      const html = results
+        .map((item) => {
+          const title = item.title || item.url || 'Medical source';
+          const url = item.url || item.id || '#';
+          return `<li><a href="${url}" target="_blank" rel="noopener noreferrer">${title}</a></li>`;
+        })
+        .join('');
+      
+      console.log('[render] rendering sources HTML');
+      sourceList.innerHTML = html;
+    }
+
+    function renderClinics(data) {
+      const clinics = Array.isArray(data?.clinics) ? data.clinics : [];
+
+      if (!clinics.length) {
+        clinicList.innerHTML = '<li>No clinics returned (missing location, missing key, or no nearby results).</li>';
+        return;
+      }
+
+      const html = clinics
+        .map((c) => {
+          const name = c.name || 'Clinic';
+          const address = c.address || 'No address';
+          const rating = c.rating ?? 'N/A';
+          const openNow = c.open_now == null ? 'Unknown' : (c.open_now ? 'Open now' : 'Closed now');
+          const maps = c.maps_url || '#';
+          return `<li><strong>${name}</strong><br/>${address}<br/>Rating: ${rating} | ${openNow}<br/><a href="${maps}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a></li>`;
+        })
+        .join('');
+
+      clinicList.innerHTML = html;
+    }
+
+    document.getElementById('healthBtn').onclick = async () => {
+      try {
+        console.log('[UI] Testing server connection...');
+        const { res, parsed } = await callApi('/health');
+        if (res.ok) {
+          console.log('[UI] ✓ Server is healthy:', parsed);
+          output.textContent = JSON.stringify({
+            status: '✓ Server is healthy!',
+            ...parsed
+          }, null, 2);
+        }
+      } catch (err) {
+        console.error('[UI] Health check error:', err);
+      }
+    };
+
+    document.getElementById('clearBtn').onclick = () => {
+      output.textContent = 'Ready.';
+      aiText.innerHTML = 'Run a diagnosis to see readable AI summary text here.';
+      sourceList.innerHTML = '<li>No source links yet.</li>';
+      clinicList.innerHTML = '<li>No clinic results yet.</li>';
+    };
+
+    document.getElementById('useLocalBtn').onclick = () => {
+      baseUrlInput.value = 'http://localhost:8016';
+      base();
+    };
+
+    document.getElementById('useHostBtn').onclick = () => {
+      baseUrlInput.value = defaultBaseFromHost();
+      base();
+    };
+
+    document.getElementById('setVngBtn').onclick = () => {
+      document.getElementById('lat').value = '10.7295';
+      document.getElementById('lng').value = '106.7228';
+      output.textContent = JSON.stringify({
+        location: 'VNG District 7 (HCMC)',
+        coordinates: { lat: 10.7295, lng: 106.7228 },
+        hint: 'Location set. Run diagnosis to find nearby clinics.'
+      }, null, 2);
+    };
+
+    document.getElementById('useGeoBtn').onclick = () => {
+      if (!navigator.geolocation) {
+        output.textContent = JSON.stringify({
+          error: 'Geolocation is not supported in this browser.'
+        }, null, 2);
+        return;
+      }
+
+      output.textContent = JSON.stringify({
+        status: 'Requesting browser geolocation permission...'
+      }, null, 2);
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          document.getElementById('lat').value = String(lat);
+          document.getElementById('lng').value = String(lng);
+          output.textContent = JSON.stringify({
+            status: 'Location captured',
+            coordinates: { lat, lng },
+            accuracy_meters: position.coords.accuracy,
+            hint: 'Run diagnosis to find nearby clinics.'
+          }, null, 2);
+        },
+        (err) => {
+          output.textContent = JSON.stringify({
+            error: 'Unable to get location',
+            code: err.code,
+            message: err.message,
+            hint: 'Allow location permission, or enter lat/lng manually.'
+          }, null, 2);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
+        }
+      );
+    };
+
+    document.getElementById('diagnoseBtn').onclick = () => {
+      try {
+        const language = document.getElementById('lang').value;
+        const user_message = document.getElementById('message').value;
+        const region_name = document.getElementById('regionName').value.trim();
+        const latRaw = document.getElementById('lat').value.trim();
+        const lngRaw = document.getElementById('lng').value.trim();
+
+        if (!user_message.trim() && !region_name) {
+          output.textContent = JSON.stringify({
+            error: 'validation_error',
+            message: 'Please enter a symptom message or region name before analyzing.'
+          }, null, 2);
+          return;
+        }
+
+        const payload = { language };
+        if (region_name) {
+          payload.region_name = region_name;
+        } else {
+          payload.user_message = user_message;
+        }
+        if (latRaw && lngRaw) {
+          payload.lat = Number(latRaw);
+          payload.lng = Number(lngRaw);
+        }
+
+        callApi('/api/diagnose', payload).then(({ parsed }) => {
+          console.log('[UI] Rendering diagnosis:', parsed);
+          renderDiagnosis(parsed);
+          renderClinics(parsed);
+        }).catch((err) => {
+          console.error('[UI] Diagnosis error:', err);
+          aiText.innerHTML = `<p style="color: red;">Error: ${err.message}</p>`;
+          clinicList.innerHTML = `<li style="color: red;">Error: ${err.message}</li>`;
+        });
+      } catch (err) {
+        console.error('[UI] Diagnosis handler error:', err);
+        output.textContent = JSON.stringify({ error: err.message }, null, 2);
+      }
+    };
+
+    document.getElementById('sourcesBtn').onclick = () => {
+      try {
+        const query = document.getElementById('query').value.trim();
+        if (!query) {
+          output.textContent = JSON.stringify({
+            status: 'validation_error',
+            message: 'Please enter a medical query before calling /api/sources.'
+          }, null, 2);
+          return;
+        }
+        callApi('/api/sources', { query }).then(({ parsed }) => {
+          console.log('[UI] Rendering sources:', parsed);
+          renderSources(parsed);
+        }).catch((err) => {
+          console.error('[UI] Sources error:', err);
+          sourceList.innerHTML = `<li style="color: red;">Error: ${err.message}</li>`;
+        });
+      } catch (err) {
+        console.error('[UI] Sources handler error:', err);
+        output.textContent = JSON.stringify({ error: err.message }, null, 2);
+      }
+    };
+
+    document.getElementById('runAllBtn').onclick = async () => {
+      try {
+        const language = document.getElementById('lang').value;
+        const user_message = document.getElementById('message').value;
+        const query = document.getElementById('query').value.trim();
+
+        if (!user_message.trim()) {
+          output.textContent = JSON.stringify({
+            error: 'validation_error',
+            message: 'Please enter a symptom message.'
+          }, null, 2);
+          return;
+        }
+
+        const combined = await callApi('/api/analyze', {
+          input_text: query || user_message,
+          language,
+          num_results: 5
+        });
+        console.log('[UI] Rendering full analysis:', combined.parsed);
+        renderDiagnosis(combined.parsed);
+        renderSources(combined.parsed);
+        renderClinics(combined.parsed);
+
+        output.textContent = JSON.stringify({
+          combined: combined.parsed
+        }, null, 2);
+      } catch (err) {
+        console.error('[UI] Full analysis error:', err);
+        output.textContent = JSON.stringify({ error: err.message }, null, 2);
+      }
+    };
+
+    document.querySelectorAll('[data-sample]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const sample = samplePrompts[btn.getAttribute('data-sample')];
+        if (!sample) return;
+        document.getElementById('lang').value = sample.language;
+        document.getElementById('message').value = sample.text;
+      });
+    });
+
+    baseUrlInput.value = defaultBaseFromHost();
+    base();
+
+    if (!baseUrlInput.value && window.location.hostname.endsWith('.trycloudflare.com')) {
+      output.textContent = JSON.stringify({
+        hint: 'Cloudflared mode detected. Add ?apiBase=https://<your-api-tunnel>.trycloudflare.com to this UI URL, or paste API URL in Base URL field.',
+        example: `${window.location.origin}${window.location.pathname}?apiBase=https://your-api-tunnel.trycloudflare.com`
+      }, null, 2);
+    }
+    
+    // Log initialization
+    console.log('[Init] Person 3 AI UI loaded');
+    console.log('[Init] API base URL:', baseUrlInput.value);
+    console.log('[Init] Open browser console (F12) to see detailed API logs');
+    console.log('[Init] Click any button to test endpoints');
+
+  </script>
+</body>
+</html>

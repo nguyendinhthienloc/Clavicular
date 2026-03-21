@@ -1,0 +1,30 @@
+﻿{
+    "success":  true,
+    "data":  {
+                 "conditions":  [
+                                    {
+                                        "name":  "Appendicitis",
+                                        "likelihood":  "High",
+                                        "explanation":  "Sharp right lower abdominal pain with fever and nausea suggests appendix inflammation."
+                                    },
+                                    {
+                                        "name":  "Ovarian Cyst",
+                                        "likelihood":  "Low",
+                                        "explanation":  "Can cause similar pain but less likely with fever present."
+                                    }
+                                ],
+                 "severity":  "Emergency",
+                 "action":  "Go to emergency room immediately as symptoms strongly suggest appendicitis requiring urgent evaluation.",
+                 "home_tips":  [
+                                   "Do not eat or drink anything",
+                                   "Do not take pain medication",
+                                   "Avoid applying heat to the area"
+                               ],
+                 "warning_signs":  [
+                                       "Severe pain spreading to entire abdomen",
+                                       "Vomiting",
+                                       "High fever above 39Â°C"
+                                   ],
+                 "disclaimer":  "This is AI information only, not medical advice. For emergencies call 115."
+             }
+}

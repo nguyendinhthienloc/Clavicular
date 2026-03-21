@@ -1,0 +1,81 @@
+
+<style>
+.board { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 4px 0; }
+.col-head { font-size: 13px; font-weight: 500; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--color-border-tertiary); color: var(--color-text-primary); }
+.role { font-size: 11px; font-weight: 500; letter-spacing: .04em; padding: 2px 7px; border-radius: 20px; display: inline-block; margin-bottom: 8px; }
+.task { font-size: 12px; color: var(--color-text-secondary); padding: 6px 8px; border-radius: 6px; border: 1px solid var(--color-border-tertiary); margin-bottom: 6px; display: flex; gap: 6px; align-items: flex-start; line-height: 1.5; }
+.task-num { font-size: 10px; font-weight: 500; min-width: 16px; color: var(--color-text-tertiary); padding-top: 1px; }
+.tag { font-size: 10px; padding: 1px 5px; border-radius: 4px; white-space: nowrap; margin-left: auto; align-self: center; flex-shrink: 0; }
+.hr-tag  { background: #EEEDFE; color: #3C3489; }
+.hr-tag.dark { background: #3C3489; color: #CECBF6; }
+.tl-tag  { background: #E1F5EE; color: #085041; }
+.am-tag  { background: #FAEEDA; color: #633806; }
+.co-tag  { background: #FAECE7; color: #712B13; }
+.section { background: var(--color-background-secondary); border-radius: 10px; padding: 12px 14px; }
+.timeline { display: flex; gap: 0; margin: 12px 0 0; border-radius: 8px; overflow: hidden; font-size: 11px; font-weight: 500; }
+.tl-seg { padding: 6px 0; text-align: center; color: #fff; }
+</style>
+
+<div style="padding: 2px 0 16px;">
+  <div style="font-size: 13px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 14px;">30-hour sprint · 4 people · LotusHacks 2026</div>
+
+  <!-- Timeline bar -->
+  <div class="timeline">
+    <div class="tl-seg" style="background:#7F77DD;width:23%">0–7h<br>Setup</div>
+    <div class="tl-seg" style="background:#1D9E75;width:30%">7–17h<br>Core build</div>
+    <div class="tl-seg" style="background:#BA7517;width:27%">17–26h<br>AI integrations</div>
+    <div class="tl-seg" style="background:#993C1D;width:20%">26–30h<br>Polish + demo</div>
+  </div>
+
+  <div class="board" style="margin-top: 14px;">
+
+    <!-- Person 1 -->
+    <div class="section">
+      <div class="col-head">Person 1 — UI lead</div>
+      <span class="role" style="background:#EEEDFE;color:#3C3489;">HTML + CSS</span>
+      <div class="task"><span class="task-num">1</span>Scaffold app with Lovable.dev<span class="tag hr-tag">0–1h</span></div>
+      <div class="task"><span class="task-num">2</span>Set up HTML/CSS base layout, navigation<span class="tag hr-tag">1–3h</span></div>
+      <div class="task"><span class="task-num">3</span>Integrate react-body-highlighter, front/back toggle<span class="tag hr-tag">3–7h</span></div>
+      <div class="task"><span class="task-num">4</span>Build DiagnosisCard UI: severity badge, action button<span class="tag hr-tag">11–14h</span></div>
+      <div class="task"><span class="task-num">5</span>Mobile responsiveness + polish<span class="tag hr-tag">24–27h</span></div>
+      <div class="task"><span class="task-num">6</span>Loading skeletons, error states<span class="tag hr-tag">27–29h</span></div>
+    </div>
+
+    <!-- Person 2 -->
+    <div class="section">
+      <div class="col-head">Person 2 — Form + state</div>
+      <span class="role" style="background:#E1F5EE;color:#085041;">HTML + JS</span>
+      <div class="task"><span class="task-num">1</span>Build SymptomForm: pain type, duration, severity slider<span class="tag tl-tag">3–7h</span></div>
+      <div class="task"><span class="task-num">2</span>Wire app state (Zustand or plain JS object)<span class="tag tl-tag">7–9h</span></div>
+      <div class="task"><span class="task-num">3</span>Connect form → API call trigger<span class="tag tl-tag">9–11h</span></div>
+      <div class="task"><span class="task-num">4</span>ElevenLabs STT: mic button → auto-fill form<span class="tag tl-tag">17–20h</span></div>
+      <div class="task"><span class="task-num">5</span>Vietnamese language toggle (swap model to Qwen)<span class="tag tl-tag">21–23h</span></div>
+      <div class="task"><span class="task-num">6</span>End-to-end happy path testing<span class="tag tl-tag">27–29h</span></div>
+    </div>
+
+    <!-- Person 3 -->
+    <div class="section">
+      <div class="col-head">Person 3 — AI core</div>
+      <span class="role" style="background:#FAEEDA;color:#633806;">JS backend</span>
+      <div class="task"><span class="task-num">1</span>Set up .env, collect all API keys<span class="tag am-tag">0–1h</span></div>
+      <div class="task"><span class="task-num">2</span>Write OpenRouter fetch + JSON parse (Claude model)<span class="tag am-tag">7–10h</span></div>
+      <div class="task"><span class="task-num">3</span>Craft and iterate on system prompt<span class="tag am-tag">10–12h</span></div>
+      <div class="task"><span class="task-num">4</span>Handle severity → color mapping logic<span class="tag am-tag">12–14h</span></div>
+      <div class="task"><span class="task-num">5</span>ElevenLabs TTS: read diagnosis aloud<span class="tag am-tag">17–19h</span></div>
+      <div class="task"><span class="task-num">6</span>Edge cases: empty response, API timeout fallback<span class="tag am-tag">24–26h</span></div>
+    </div>
+
+    <!-- Person 4 -->
+    <div class="section">
+      <div class="col-head">Person 4 — AI extras + deploy</div>
+      <span class="role" style="background:#FAECE7;color:#712B13;">JS + DevOps</span>
+      <div class="task"><span class="task-num">1</span>fal.ai: generate body region illustration<span class="tag co-tag">14–17h</span></div>
+      <div class="task"><span class="task-num">2</span>Exa.ai: fetch + display 3 medical references<span class="tag co-tag">17–20h</span></div>
+      <div class="task"><span class="task-num">3</span>Deploy to Replit, get public URL<span class="tag co-tag">26–27h</span></div>
+      <div class="task"><span class="task-num">4</span>Record 2-min demo video with voiceover<span class="tag co-tag">27–29h</span></div>
+      <div class="task"><span class="task-num">5</span>3-slide pitch deck (problem → demo → impact)<span class="tag co-tag">29–30h</span></div>
+      <div class="task"><span class="task-num">6</span>Disclaimer banner + medical footer text<span class="tag co-tag">23–24h</span></div>
+    </div>
+
+  </div>
+</div>

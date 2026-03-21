@@ -1,0 +1,28 @@
+﻿{
+    "success":  true,
+    "data":  {
+                 "conditions":  [
+                                    {
+                                        "name":  "Myocardial infarction",
+                                        "likelihood":  "High",
+                                        "explanation":  "Symptoms include chest pain and left arm pain."
+                                    },
+                                    {
+                                        "name":  "Angina",
+                                        "likelihood":  "Medium",
+                                        "explanation":  "Chest pressure can indicate angina; seek evaluation."
+                                    }
+                                ],
+                 "severity":  "Emergency",
+                 "action":  "Call emergency services immediately or have someone take you to the hospital.",
+                 "home_tips":  [
+
+                               ],
+                 "warning_signs":  [
+                                       "Severe chest pain",
+                                       "Pain radiating to arm",
+                                       "Shortness of breath"
+                                   ],
+                 "disclaimer":  "This is AI information only, not medical advice. For emergencies call 115."
+             }
+}
