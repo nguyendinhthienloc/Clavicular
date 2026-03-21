@@ -3,14 +3,14 @@
   "condition_name": "chest pain",
   "origin": {
     "lat": 10.7295,
-    "lon": 106.7228
+    "lng": 106.7228
   },
   "results": [
     {
       "name": "FV Hospital Cafeteria",
       "address": "",
       "lat": 10.732201,
-      "lon": 106.718349,
+      "lng": 106.718349,
       "rating": null,
       "open_now": null,
       "maps_url": "https://www.google.com/maps/search/?api=1&query=10.732201,106.718349"
@@ -19,7 +19,7 @@
       "name": "FV Hospital",
       "address": "6 Nguyen Luong Bang Street (Saigon South, District 7), Thành phố Hồ Chí Minh, Thành phố Hồ Chí Minh",
       "lat": 10.732368191856418,
-      "lon": 106.71821729159144,
+      "lng": 106.71821729159144,
       "rating": null,
       "open_now": null,
       "maps_url": "https://www.google.com/maps/search/?api=1&query=10.732368191856418,106.71821729159144"
@@ -28,7 +28,7 @@
       "name": "FV hospital swimming pool",
       "address": "",
       "lat": 10.732371942950852,
-      "lon": 106.71816864961302,
+      "lng": 106.71816864961302,
       "rating": null,
       "open_now": null,
       "maps_url": "https://www.google.com/maps/search/?api=1&query=10.732371942950852,106.71816864961302"
