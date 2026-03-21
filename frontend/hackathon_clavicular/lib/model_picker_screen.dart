@@ -191,14 +191,16 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
       ),
     ];
 
-    final Color guideBackground = (isDarkMode
-            ? const Color(0xFF111827)
-            : Colors.white)
-        .withOpacity(isDarkMode ? 0.95 : 0.98);
-    final Color guideTextColor =
-        isDarkMode ? const Color(0xFFE5E7EB) : const Color(0xFF1F2937);
-    final Color guideBorderColor =
-        isDarkMode ? Colors.white10 : const Color(0xFFE5E7EB);
+    final Color guideBackground =
+        (isDarkMode ? const Color(0xFF111827) : Colors.white).withOpacity(
+          isDarkMode ? 0.95 : 0.98,
+        );
+    final Color guideTextColor = isDarkMode
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF1F2937);
+    final Color guideBorderColor = isDarkMode
+        ? Colors.white10
+        : const Color(0xFFE5E7EB);
     final Color guideIconBackground = isDarkMode
         ? const Color(0xFF0F172A).withOpacity(0.9)
         : Colors.white.withOpacity(0.95);
@@ -212,6 +214,17 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
             color: sidebarColor,
             child: Column(
               children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 20),
+                  child: Image.asset(
+                    isDarkMode
+                        ? 'assets/logo_light.png'
+                        : 'assets/logo_dark.png',
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.contain,
+                  ),
+                ),
                 const Spacer(),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 24.0),
@@ -264,47 +277,48 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                                     isModelLocked: _isModelLocked,
                                     onSelectionChanged:
                                         (List<String>? partNames) {
-                                      final List<String> resolvedParts =
-                                          partNames ?? <String>[];
-                                      setState(() {
-                                        selectedBodyParts = resolvedParts;
-                                        if (_hasSelectedBodyPart(
-                                          resolvedParts,
-                                        )) {
-                                          _selectedViewport = 'diagnosis';
-                                        } else {
-                                          _selectedViewport = 'chat';
-                                        }
-                                      });
-                                    },
+                                          final List<String> resolvedParts =
+                                              partNames ?? <String>[];
+                                          setState(() {
+                                            selectedBodyParts = resolvedParts;
+                                            if (_hasSelectedBodyPart(
+                                              resolvedParts,
+                                            )) {
+                                              _selectedViewport = 'diagnosis';
+                                            } else {
+                                              _selectedViewport = 'chat';
+                                            }
+                                          });
+                                        },
                                   ),
+                                ),
                               ),
-                            ),
                               Positioned(
                                 top: 20,
                                 right: 20,
                                 child: PointerInterceptor(
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       AnimatedSize(
-                                        duration:
-                                            const Duration(milliseconds: 200),
+                                        duration: const Duration(
+                                          milliseconds: 200,
+                                        ),
                                         curve: Curves.easeOutCubic,
                                         alignment: Alignment.topRight,
                                         child: !_isLayerMenuOpen
                                             ? const SizedBox.shrink()
                                             : Container(
-                                                margin:
-                                                    const EdgeInsets.only(
+                                                margin: const EdgeInsets.only(
                                                   right: 12,
                                                 ),
                                                 padding:
                                                     const EdgeInsets.symmetric(
-                                                  horizontal: 16,
-                                                  vertical: 12,
-                                                ),
+                                                      horizontal: 16,
+                                                      vertical: 12,
+                                                    ),
                                                 decoration: BoxDecoration(
                                                   color: guideBackground,
                                                   borderRadius:
@@ -316,16 +330,19 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                                                     BoxShadow(
                                                       color: isDarkMode
                                                           ? Colors.black
-                                                              .withValues(
-                                                              alpha: 0.35,
-                                                            )
+                                                                .withValues(
+                                                                  alpha: 0.35,
+                                                                )
                                                           : const Color(
                                                               0xFF94A3B8,
                                                             ).withValues(
                                                               alpha: 0.25,
                                                             ),
                                                       blurRadius: 18,
-                                                      offset: const Offset(0, 10),
+                                                      offset: const Offset(
+                                                        0,
+                                                        10,
+                                                      ),
                                                     ),
                                                   ],
                                                 ),
@@ -339,16 +356,18 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                                                       'Layers',
                                                       style:
                                                           GoogleFonts.montserrat(
-                                                        fontSize: 14,
-                                                        fontWeight:
-                                                            FontWeight.w700,
-                                                        color: guideTextColor,
-                                                      ),
+                                                            fontSize: 14,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                            color:
+                                                                guideTextColor,
+                                                          ),
                                                     ),
                                                     const SizedBox(height: 8),
                                                     ..._layerOptions.map(
-                                                      (String layer) =>
-                                                          GestureDetector(
+                                                      (
+                                                        String layer,
+                                                      ) => GestureDetector(
                                                         behavior:
                                                             HitTestBehavior
                                                                 .opaque,
@@ -356,21 +375,24 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                                                             _selectLayer(layer),
                                                         child: Padding(
                                                           padding:
-                                                              const EdgeInsets
-                                                                  .only(top: 2),
+                                                              const EdgeInsets.only(
+                                                                top: 2,
+                                                              ),
                                                           child: Row(
                                                             mainAxisSize:
-                                                                MainAxisSize.min,
+                                                                MainAxisSize
+                                                                    .min,
                                                             children: [
                                                               Icon(
                                                                 layer ==
                                                                         _selectedLayer
                                                                     ? Icons
-                                                                        .check_circle
+                                                                          .check_circle
                                                                     : Icons
-                                                                        .circle_outlined,
+                                                                          .circle_outlined,
                                                                 size: 16,
-                                                                color: layer ==
+                                                                color:
+                                                                    layer ==
                                                                         _selectedLayer
                                                                     ? iconColor
                                                                     : guideTextColor,
@@ -380,15 +402,15 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                                                               ),
                                                               Text(
                                                                 layer,
-                                                                style: GoogleFonts
-                                                                    .montserrat(
+                                                                style: GoogleFonts.montserrat(
                                                                   fontSize: 12,
-                                                                  fontWeight: layer ==
+                                                                  fontWeight:
+                                                                      layer ==
                                                                           _selectedLayer
                                                                       ? FontWeight
-                                                                          .w600
+                                                                            .w600
                                                                       : FontWeight
-                                                                          .w500,
+                                                                            .w500,
                                                                   color:
                                                                       guideTextColor,
                                                                 ),
@@ -444,8 +466,9 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                                         child: Container(
                                           decoration: BoxDecoration(
                                             color: guideIconBackground,
-                                            borderRadius:
-                                                BorderRadius.circular(999),
+                                            borderRadius: BorderRadius.circular(
+                                              999,
+                                            ),
                                             border: Border.all(
                                               color: guideBorderColor,
                                             ),
@@ -459,22 +482,22 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                                         ),
                                       ),
                                       AnimatedSize(
-                                        duration:
-                                            const Duration(milliseconds: 200),
+                                        duration: const Duration(
+                                          milliseconds: 200,
+                                        ),
                                         curve: Curves.easeOutCubic,
                                         alignment: Alignment.bottomLeft,
                                         child: !_isControlsGuideVisible
                                             ? const SizedBox.shrink()
                                             : Container(
-                                                margin:
-                                                    const EdgeInsets.only(
+                                                margin: const EdgeInsets.only(
                                                   left: 12,
                                                 ),
                                                 padding:
                                                     const EdgeInsets.symmetric(
-                                                  horizontal: 16,
-                                                  vertical: 12,
-                                                ),
+                                                      horizontal: 16,
+                                                      vertical: 12,
+                                                    ),
                                                 decoration: BoxDecoration(
                                                   color: guideBackground,
                                                   borderRadius:
@@ -486,17 +509,19 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                                                     BoxShadow(
                                                       color: isDarkMode
                                                           ? Colors.black
-                                                              .withValues(
-                                                              alpha: 0.35,
-                                                            )
+                                                                .withValues(
+                                                                  alpha: 0.35,
+                                                                )
                                                           : const Color(
                                                               0xFF94A3B8,
                                                             ).withValues(
                                                               alpha: 0.25,
                                                             ),
                                                       blurRadius: 18,
-                                                      offset:
-                                                          const Offset(0, 10),
+                                                      offset: const Offset(
+                                                        0,
+                                                        10,
+                                                      ),
                                                     ),
                                                   ],
                                                 ),
@@ -510,22 +535,23 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                                                       'Controls guide',
                                                       style:
                                                           GoogleFonts.montserrat(
-                                                        fontSize: 14,
-                                                        fontWeight:
-                                                            FontWeight.w700,
-                                                        color: guideTextColor,
-                                                      ),
+                                                            fontSize: 14,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                            color:
+                                                                guideTextColor,
+                                                          ),
                                                     ),
                                                     const SizedBox(height: 8),
                                                     ..._controlGuideLines.map(
                                                       (String line) => Padding(
                                                         padding:
-                                                            const EdgeInsets
-                                                                .only(top: 2),
+                                                            const EdgeInsets.only(
+                                                              top: 2,
+                                                            ),
                                                         child: Text(
                                                           line,
-                                                          style: GoogleFonts
-                                                              .montserrat(
+                                                          style: GoogleFonts.montserrat(
                                                             fontSize: 12,
                                                             fontWeight:
                                                                 FontWeight.w500,
