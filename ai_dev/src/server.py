@@ -505,7 +505,7 @@ def clinics(payload: ClinicsRequest) -> Dict[str, Any]:
     return {
         "success": True,
         "condition_name": condition_name,
-        "origin": {"lat": lat, "lon": lng},
+        "origin": {"lat": lat, "lng": lng},
         "results": results,
     }
 
