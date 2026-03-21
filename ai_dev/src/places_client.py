@@ -87,7 +87,7 @@ def find_nearby_clinics(
                     "name": result.get("name"),
                     "address": address,
                     "lat": fsq_lat,
-                    "lon": fsq_lng,
+                       "lng": fsq_lng,
                     "rating": result.get("rating"),
                     "open_now": result.get("hours", {}).get("open_now"),
                     "maps_url": (

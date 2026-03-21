@@ -37,7 +37,7 @@ This folder is dedicated to Thien Loc's AI development and is intentionally sepa
   - Body:
     - `{ "condition_name": "chest pain", "lat": 10.7295, "lng": 106.7228 }`
     - Also supported: `latitude`/`longitude` or `coordinates: { "lat": ..., "lng": ... }`
-  - Response includes recommended places with `lat` and `lon`.
+    - Response includes recommended places with `lat` and `lng`.
 
 - Chat endpoint (ChatGPT roleplays a trained clinician):
   - `POST http://localhost:8000/api/chat`
