@@ -27,4 +27,10 @@ router.all('/clinics',
 	AIController.clinics
 );
 
+router.all('/chat',
+	ValidatorMiddleware.validateMethods(['POST']),
+	ValidatorMiddleware.validateContentType,
+	AIController.chat
+);
+
 export default router;
