@@ -38,6 +38,7 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
   bool _isControlsGuideVisible = false;
   bool _isLayerMenuOpen = false;
   String _selectedLayer = _layerOptions.first;
+  bool _isModelLocked = false;
 
   bool _hasSelectedBodyPart(List<String>? partNames) {
     return (partNames ?? const <String>[]).isNotEmpty;
@@ -132,6 +133,12 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
   void _toggleLayerMenuVisible() {
     setState(() {
       _isLayerMenuOpen = !_isLayerMenuOpen;
+    });
+  }
+
+  void _toggleModelLock() {
+    setState(() {
+      _isModelLocked = !_isModelLocked;
     });
   }
 
@@ -254,6 +261,7 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                                   child: ThreeModelView(
                                     isDarkMode: isDarkMode,
                                     modelAssetPath: _currentModelAsset,
+                                    isModelLocked: _isModelLocked,
                                     onSelectionChanged:
                                         (List<String>? partNames) {
                                       final List<String> resolvedParts =
@@ -532,6 +540,36 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                                               ),
                                       ),
                                     ],
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                right: 20,
+                                bottom: 20,
+                                child: PointerInterceptor(
+                                  child: MouseRegion(
+                                    cursor: SystemMouseCursors.click,
+                                    child: GestureDetector(
+                                      onTap: _toggleModelLock,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: guideIconBackground,
+                                          borderRadius:
+                                              BorderRadius.circular(999),
+                                          border: Border.all(
+                                            color: guideBorderColor,
+                                          ),
+                                        ),
+                                        padding: const EdgeInsets.all(10),
+                                        child: Icon(
+                                          _isModelLocked
+                                              ? Icons.lock
+                                              : Icons.lock_open,
+                                          color: iconColor,
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),

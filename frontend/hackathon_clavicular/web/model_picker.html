@@ -77,6 +77,15 @@
       let selectionSummaryText = 'Nothing selected';
       let selectionFullText = 'Nothing selected';
       let isSelectionStatusActive = false;
+      let latestRotationLockState = false;
+      let rotationLockHandler = null;
+
+      function handleRotationLockMessage(nextState) {
+        latestRotationLockState = nextState;
+        if (typeof rotationLockHandler === 'function') {
+          rotationLockHandler(latestRotationLockState);
+        }
+      }
 
       function setStatus(message) {
         console.log(message);
@@ -160,6 +169,8 @@
 
         if (data.type === 'theme-changed') {
           applyTheme(data.mode === 'dark' ? 'dark' : 'light');
+        } else if (data.type === 'lock-state-changed') {
+          handleRotationLockMessage(Boolean(data.locked));
         }
       });
 
@@ -211,6 +222,7 @@
 
           const AUTO_ROTATE_DELAY_MS = 500;
           let autoRotateTimeoutId = null;
+          let isRotationLocked = latestRotationLockState;
 
           function pauseAutoRotate() {
             if (autoRotateTimeoutId !== null) {
@@ -225,9 +237,23 @@
               clearTimeout(autoRotateTimeoutId);
             }
             autoRotateTimeoutId = window.setTimeout(() => {
+              if (isRotationLocked) {
+                controls.autoRotate = false;
+                return;
+              }
               controls.autoRotate = true;
             }, AUTO_ROTATE_DELAY_MS);
           }
+
+          rotationLockHandler = (locked) => {
+            isRotationLocked = Boolean(locked);
+            if (isRotationLocked) {
+              pauseAutoRotate();
+            } else {
+              resumeAutoRotateSoon();
+            }
+          };
+          rotationLockHandler(isRotationLocked);
 
           controls.addEventListener('start', pauseAutoRotate);
           controls.addEventListener('end', resumeAutoRotateSoon);
@@ -247,6 +273,8 @@
           const pointerAim = { x: 0, y: 0 };
           const pointerAimSmooth = { x: 0, y: 0 };
           const MAX_EYE_SHIFT = 0.007;
+          const MAX_EYE_VERTICAL_SHIFT = 0.004;
+          const MAX_EYE_DEPTH_SHIFT = 0.004;
           const EYE_Y_OFFSET = -0.0015;
 
           let pickableMeshes = [];
@@ -700,6 +728,11 @@
               pointerAim.x,
               0.12
             );
+            pointerAimSmooth.y = THREE.MathUtils.lerp(
+              pointerAimSmooth.y,
+              pointerAim.y,
+              0.12
+            );
 
             for (const pivot of eyeMeshes) {
               const baseRot = pivot.userData.eyeBaseRotation;
@@ -724,12 +757,13 @@
                 0.2
               );
 
-              const shift = pointerAimSmooth.x * MAX_EYE_SHIFT;
+              const shiftX = pointerAimSmooth.x * MAX_EYE_SHIFT;
+              const shiftZ = -pointerAimSmooth.y * MAX_EYE_DEPTH_SHIFT;
               for (const child of pivot.children) {
                 child.position.set(
-                  baseOffset.x + shift,
+                  baseOffset.x + shiftX,
                   baseOffset.y + EYE_Y_OFFSET,
-                  baseOffset.z
+                  baseOffset.z + shiftZ
                 );
               }
             }
