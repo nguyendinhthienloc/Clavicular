@@ -1,0 +1,7 @@
+{
+  "message": "What symptoms did I tell you earlier?",
+  "language": "en",
+  "session_id": "REPLACE_WITH_SESSION_ID_FROM_TURN1",
+  "model": "gpt-4o-mini",
+  "temperature": 0.3
+}

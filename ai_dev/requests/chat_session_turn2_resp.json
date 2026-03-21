@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "reply": "You mentioned having a migraine for 2 days and being sensitive to light. If there are any additional symptoms or changes, please let me know.",
+  "model": "gpt-4o-mini-2024-07-18",
+  "roleplay": "trained_clinician",
+  "session_id": "d8a6b888-5044-4aa4-84da-7168ac7acc2a",
+  "session_turns": 2
+}
