@@ -15,6 +15,7 @@ This folder contains project documentation organized by ownership.
 - team/PLAN.md
 - team/TRACKS.md
 - team/API_KEYS.md
+- team/JS_BACKEND_API_BODY_CONTRACT.md
 
 ## Non-markdown references
 

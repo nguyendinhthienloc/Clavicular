@@ -5,7 +5,7 @@ import time
 from uuid import uuid4
 from typing import Any, Dict, List, Literal, Optional
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -21,6 +21,7 @@ try:
     from .openrouter_client import call_diagnosis
     from .openai_chat_client import DEFAULT_CHAT_MODEL, chat_with_clinician
     from .places_client import find_nearby_clinics
+    from .whisper_client import transcribe_audio
 except ImportError:
     from config import get_env, load_env
     from exa_client import search_medical_sources
@@ -30,6 +31,7 @@ except ImportError:
     from openrouter_client import call_diagnosis
     from openai_chat_client import DEFAULT_CHAT_MODEL, chat_with_clinician
     from places_client import find_nearby_clinics
+    from whisper_client import transcribe_audio
 
 
 class DiagnoseRequest(BaseModel):
@@ -322,6 +324,13 @@ def demo() -> str:
 
         <hr />
 
+        <label>Voice input test (record then transcribe)</label><br/>
+        <button onclick='startRec()' id='recBtn'>Start recording</button>
+        <button onclick='stopRec()' id='stopBtn' disabled>Stop + transcribe</button>
+        <div id='transcribeOut' style='margin-top:8px;color:green;'></div>
+
+        <hr />
+
         <label>Sources query</label>
         <input id='srcQuery' value='appendicitis symptoms' />
         <button onclick='sourcesTest()'>Test /api/sources</button>
@@ -337,6 +346,9 @@ def demo() -> str:
 
         <script>
             const out = document.getElementById('out');
+            let mediaRecorder;
+            let chunks = [];
+
             async function call(path, payload) {
                 const res = await fetch(path, {
                     method: 'POST',
@@ -399,6 +411,36 @@ def demo() -> str:
                 const region_name = document.getElementById('region').value;
                 call('/api/image', { region_name });
             }
+            async function startRec() {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                chunks = [];
+                mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+                mediaRecorder.start();
+                document.getElementById('recBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+                document.getElementById('transcribeOut').textContent = 'Recording...';
+            }
+            async function stopRec() {
+                mediaRecorder.stop();
+                mediaRecorder.onstop = async () => {
+                    const blob = new Blob(chunks, { type: 'audio/webm' });
+                    const formData = new FormData();
+                    formData.append('file', blob, 'audio.webm');
+                    formData.append('language', document.getElementById('lang').value);
+
+                    const res = await fetch('/api/transcribe', { method: 'POST', body: formData });
+                    const data = await res.json();
+                    document.getElementById('transcribeOut').textContent =
+                        data.text ? ('ok: ' + data.text) : ('error: ' + JSON.stringify(data));
+
+                    if (data.text) {
+                        document.getElementById('diagMsg').value = data.text;
+                    }
+                };
+                document.getElementById('recBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+            }
         </script>
     </body>
 </html>
@@ -413,6 +455,35 @@ def echo(payload: EchoRequest) -> Dict[str, Any]:
                 "output": payload.text,
                 "length": len(payload.text),
         }
+
+
+@app.post("/api/transcribe")
+async def transcribe(
+    file: UploadFile = File(...),
+    language: str = Form(default="en"),
+) -> Dict[str, Any]:
+    """Accept an audio upload and return transcribed text."""
+    openai_key = get_env("OPENAI_KEY") or get_env("OPENAI_API_KEY")
+    if not openai_key:
+        raise HTTPException(status_code=400, detail="Missing OPENAI_KEY (or OPENAI_API_KEY)")
+
+    audio_bytes = await file.read()
+    if not audio_bytes:
+        raise HTTPException(status_code=400, detail="Empty audio file")
+
+    if len(audio_bytes) > 25 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Audio file too large (max 25MB)")
+
+    text = transcribe_audio(
+        audio_bytes=audio_bytes,
+        openai_key=openai_key,
+        language=language,
+        filename=file.filename or "audio.webm",
+    )
+    if not text:
+        raise HTTPException(status_code=502, detail="Transcription failed")
+
+    return {"success": True, "text": text}
 
 
 @app.post("/api/chat")
