@@ -41,10 +41,8 @@ class AIController {
 			const painType = req.body.painType;
 			const duration = req.body.duration;
 			const trigger = req.body.trigger;
-			const lat = req.body.lat;
-			const lng = req.body.lng;
 
-			const response = await AIService.diagnose(bodyParts, severity, painType, duration, trigger, lat, lng);
+			const response = await AIService.diagnose(bodyParts, severity, painType, duration, trigger);
 			return void res.status(response.statusCode).json(response.get()); 
 		} catch (err) {
 			next(err)
@@ -58,10 +56,8 @@ class AIController {
 			const painType = req.body.painType;
 			const duration = req.body.duration;
 			const trigger = req.body.trigger;
-			const lat = req.body.lat;
-			const lng = req.body.lng;
 
-			const response = await AIService.sources(bodyParts, severity, painType, duration, trigger, lat, lng);
+			const response = await AIService.sources(bodyParts, severity, painType, duration, trigger);
 			return void res.status(response.statusCode).json(response.get()); 
 		} catch (err) {
 			next(err)
