@@ -21,4 +21,10 @@ router.all('/sources',
 	AIController.sources
 );
 
+router.all('/clinics',
+	ValidatorMiddleware.validateMethods(['POST']),
+	ValidatorMiddleware.validateContentType,
+	AIController.clinics
+);
+
 export default router;
