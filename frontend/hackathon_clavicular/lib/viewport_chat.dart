@@ -474,66 +474,65 @@ class _ViewportChatState extends State<ViewportChat>
                           children: [
                             Container(
                               width: double.infinity,
-                              height: 110,
+                              height: 75,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(26),
-                                gradient: animatedOutlineGradient,
+                                color: composerBackground,
+                                border: Border.all(color: viewportBorder),
                               ),
-                              child: Container(
-                                margin: const EdgeInsets.all(1.4),
-                                decoration: BoxDecoration(
-                                  color: composerBackground,
-                                  borderRadius: BorderRadius.circular(24.6),
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  18,
+                                  12,
+                                  12,
+                                  12,
                                 ),
-                                child: Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    18,
-                                    20,
-                                    12,
-                                    20,
-                                  ),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.add,
-                                        color: controlIconColor,
-                                        size: 30,
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: TextField(
-                                          controller: _controller,
-                                          maxLines: 1,
-                                          textInputAction: TextInputAction.send,
-                                          style: GoogleFonts.montserrat(
-                                            color: inputTextColor,
-                                            fontSize: 16,
-                                          ),
-                                          decoration: InputDecoration(
-                                            hintText:
-                                                'How can I help you today?',
-                                            hintStyle: GoogleFonts.montserrat(
-                                              color: inputHintColor,
-                                              fontSize: 18,
-                                            ),
-                                            border: InputBorder.none,
-                                          ),
-                                          onSubmitted: (_) => _sendMessage(),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.add,
+                                      color: controlIconColor,
+                                      size: 30,
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: TextField(
+                                        controller: _controller,
+                                        maxLines: 1,
+                                        textInputAction: TextInputAction.send,
+                                        style: GoogleFonts.montserrat(
+                                          color: inputTextColor,
+                                          fontSize: 16,
                                         ),
+                                        decoration: InputDecoration(
+                                          hintText: 'How can I help you today?',
+                                          hintStyle: GoogleFonts.montserrat(
+                                            color: inputHintColor,
+                                            fontSize: 18,
+                                          ),
+                                          border: InputBorder.none,
+                                        ),
+                                        onSubmitted: (_) => _sendMessage(),
                                       ),
-                                      const SizedBox(width: 16),
-                                      IconButton(
-                                        onPressed: _sendMessage,
-                                        icon: Icon(
+                                    ),
+                                    const SizedBox(width: 16),
+                                    IconButton(
+                                      onPressed: _sendMessage,
+                                      icon: ShaderMask(
+                                        shaderCallback: (Rect bounds) {
+                                          return animatedOutlineGradient
+                                              .createShader(bounds);
+                                        },
+                                        blendMode: BlendMode.srcIn,
+                                        child: const Icon(
                                           Icons.send_rounded,
-                                          color: controlIconColor,
+                                          color: Colors.white,
                                           size: 28,
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
