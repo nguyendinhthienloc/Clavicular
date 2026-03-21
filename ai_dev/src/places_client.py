@@ -10,6 +10,7 @@ PLACES_URL = "https://places-api.foursquare.com/places/search"
 CONDITION_KEYWORDS = {
     "muscle": "orthopedic physiotherapy sports medicine",
     "chest": "cardiology heart hospital emergency",
+    "respiratory": "pulmonology respiratory hospital",
     "abdomen": "gastroenterology general hospital",
     "head": "neurology general clinic",
     "back": "orthopedic spine physiotherapy",
@@ -25,6 +26,8 @@ def get_keyword_for_condition(condition_name: str) -> str:
         return CONDITION_KEYWORDS["muscle"]
     if any(w in name_lower for w in ["chest", "heart", "cardiac", "angina"]):
         return CONDITION_KEYWORDS["chest"]
+    if any(w in name_lower for w in ["lung", "respiratory", "breath", "pulmonary"]):
+        return CONDITION_KEYWORDS["respiratory"]
     if any(w in name_lower for w in ["abdomen", "stomach", "gastro", "bowel"]):
         return CONDITION_KEYWORDS["abdomen"]
     if any(w in name_lower for w in ["head", "migraine", "neuro", "brain"]):
@@ -52,24 +55,61 @@ def find_nearby_clinics(
     keyword = get_keyword_for_condition(condition_name)
 
     try:
-        response = requests.get(
-            PLACES_URL,
-            headers={
-                "Authorization": f"Bearer {foursquare_key}",
-                "Accept": "application/json",
-                "X-Places-Api-Version": "2025-06-17",
+        headers = {
+            "Authorization": f"Bearer {foursquare_key}",
+            "Accept": "application/json",
+            "X-Places-Api-Version": "2025-06-17",
+        }
+        attempts = [
+            {
+                "name": "keyword+categories",
+                "params": {
+                    "ll": f"{lat},{lng}",
+                    "radius": radius_meters,
+                    "query": keyword,
+                    "categories": "15014,15007",  # hospitals, clinics
+                    "limit": max_results,
+                },
             },
-            params={
-                "ll": f"{lat},{lng}",
-                "radius": radius_meters,
-                "query": keyword,
-                "categories": "15014,15007",  # hospitals, clinics
-                "limit": max_results,
+            {
+                "name": "generic+categories",
+                "params": {
+                    "ll": f"{lat},{lng}",
+                    "radius": radius_meters,
+                    "query": "clinic hospital",
+                    "categories": "15014,15007",
+                    "limit": max_results,
+                },
             },
-            timeout=10,
-        )
-        response.raise_for_status()
-        results = response.json().get("results", [])
+            {
+                "name": "categories-only",
+                "params": {
+                    "ll": f"{lat},{lng}",
+                    "radius": radius_meters,
+                    "categories": "15014,15007",
+                    "limit": max_results,
+                },
+            },
+        ]
+
+        results: List[Dict[str, Any]] = []
+        for attempt in attempts:
+            response = requests.get(
+                PLACES_URL,
+                headers=headers,
+                params=attempt["params"],
+                timeout=10,
+            )
+            response.raise_for_status()
+            results = response.json().get("results", [])
+            print(
+                "[FOURSQUARE DEBUG] "
+                f"condition='{condition_name}' keyword='{keyword}' "
+                f"attempt={attempt['name']} ll={lat},{lng} "
+                f"radius={radius_meters} results={len(results)}"
+            )
+            if results:
+                break
 
         clinics: List[Dict[str, Any]] = []
         for result in results[:max_results]:
