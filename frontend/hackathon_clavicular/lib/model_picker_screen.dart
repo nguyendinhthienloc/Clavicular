@@ -28,7 +28,11 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
     'Space - Paint',
     'Ctrl/Escape - Unselect',
   ];
-  static const List<String> _layerOptions = <String>['Muscle', 'Bone'];
+  static const List<String> _layerOptions = <String>[
+    'Muscle',
+    'Bone',
+    'Organ',
+  ];
 
   List<String> selectedBodyParts = <String>[];
   String _selectedViewport = 'chat';
@@ -150,10 +154,15 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
   }
 
   String get _currentModelAsset {
-    if (_selectedLayer.toLowerCase() == 'bone') {
-      return 'assets/skele.glb';
+    switch (_selectedLayer.toLowerCase()) {
+      case 'bone':
+        return 'assets/skele.glb';
+      case 'organ':
+        return 'assets/organ.glb';
+      case 'muscle':
+      default:
+        return 'assets/my_model.glb';
     }
-    return 'assets/my_model.glb';
   }
 
   @override

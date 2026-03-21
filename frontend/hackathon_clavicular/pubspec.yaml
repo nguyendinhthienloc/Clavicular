@@ -70,6 +70,7 @@ flutter:
   assets:
     - assets/my_model.glb
     - assets/skele.glb
+    - assets/organ.glb
     - .env
     - assets/logo_dark.png
     - assets/logo_light.png
