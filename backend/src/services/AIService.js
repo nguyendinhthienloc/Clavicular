@@ -49,7 +49,7 @@ class AIService {
 		const query = `Body region: ${bodyParts.join(', ')}\nSeverity: ${severity}\nPain type: ${painType}\nDuration: ${duration}\nActivity trigger: ${trigger}`;
 
 		try {
-			const res = await axios.post(this.locAIBaseURL, {
+			const res = await axios.post(`${this.locAIBaseURL}/api/diagnose`, {
 				language: "en",
 				query,
 				lat,
