@@ -75,6 +75,10 @@ class AIService {
 			});
 
 			const text = data.output_text;
+			this.history.push({
+				role: 'assistant',
+				content: text
+			});
 
 			const response = new ServiceResponse(
 				true,
@@ -156,11 +160,22 @@ class AIService {
 				message: message,
 				history: this.history
 			});
+
+			this.history.push({
+				role: 'user',
+				content: message
+			});
+
+			this.history.push({
+				role: 'assistant',
+				content: res.data.reply
+			});
+
 			const response = new ServiceResponse(
 				true,
 				200,
 				"Success",
-				res.data.text
+				res.data.reply
 			);
 			return response;
 		} catch (err) {
