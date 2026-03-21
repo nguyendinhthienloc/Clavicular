@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import time
+from uuid import uuid4
 from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import FastAPI, HTTPException, Request
@@ -78,13 +80,87 @@ class ChatHistoryMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1)
     language: Literal["en", "vi"] = "en"
+    session_id: Optional[str] = None
     history: List[ChatHistoryMessage] = Field(default_factory=list)
     model: str = DEFAULT_CHAT_MODEL
     temperature: float = Field(default=0.4, ge=0.0, le=1.5)
 
 
+class ClinicsRequest(BaseModel):
+    condition_name: Optional[str] = None
+    query: Optional[str] = None
+    user_message: Optional[str] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    coordinates: Optional[Dict[str, float]] = None
+    radius_meters: int = Field(default=3000, ge=500, le=20000)
+    max_results: int = Field(default=3, ge=1, le=10)
+
+
 app = FastAPI(title="BodyCheck Person 3 API", version="1.0.0")
 logger = logging.getLogger("ai_dev.server")
+
+SESSION_TTL_SECONDS = 60 * 60 * 2
+SESSION_MAX_HISTORY_ITEMS = 30
+SESSION_STORE: Dict[str, Dict[str, Any]] = {}
+
+
+def _now_unix() -> int:
+    return int(time.time())
+
+
+def _cleanup_expired_sessions() -> None:
+    now = _now_unix()
+    expired = [
+        sid
+        for sid, meta in SESSION_STORE.items()
+        if now - int(meta.get("updated_at", 0)) > SESSION_TTL_SECONDS
+    ]
+    for sid in expired:
+        SESSION_STORE.pop(sid, None)
+
+
+def _get_or_create_session(session_id: Optional[str]) -> str:
+    _cleanup_expired_sessions()
+    sid = (session_id or "").strip() or str(uuid4())
+    if sid not in SESSION_STORE:
+        SESSION_STORE[sid] = {
+            "history": [],
+            "first_seen": _now_unix(),
+            "updated_at": _now_unix(),
+            "language": "en",
+        }
+    return sid
+
+
+def _build_session_context(session_meta: Dict[str, Any]) -> str:
+    history = session_meta.get("history", [])
+    recent_user_msgs = [
+        item.get("content", "").strip()
+        for item in history
+        if item.get("role") == "user" and item.get("content")
+    ]
+    recent_user_msgs = [msg for msg in recent_user_msgs if msg][-3:]
+    if not recent_user_msgs:
+        return ""
+    summary = " | ".join(recent_user_msgs)
+    return f"Recent user concerns in this session: {summary}"
+
+
+def _append_session_history(session_id: str, role: str, content: str, language: str) -> None:
+    if session_id not in SESSION_STORE:
+        return
+    text = (content or "").strip()
+    if not text:
+        return
+    history = SESSION_STORE[session_id].setdefault("history", [])
+    history.append({"role": role, "content": text})
+    if len(history) > SESSION_MAX_HISTORY_ITEMS:
+        SESSION_STORE[session_id]["history"] = history[-SESSION_MAX_HISTORY_ITEMS:]
+    SESSION_STORE[session_id]["updated_at"] = _now_unix()
+    SESSION_STORE[session_id]["language"] = language
 
 
 def _first_non_empty(*values: Optional[str]) -> Optional[str]:
@@ -194,8 +270,9 @@ def root() -> Dict[str, Any]:
                 "endpoints": [
                         "GET /health",
                         "POST /api/echo",
-            "POST /api/chat",
+                    "POST /api/chat",
                         "POST /api/diagnose",
+                    "POST /api/clinics",
                         "POST /api/sources",
                     "POST /api/analyze",
                         "POST /api/image",
@@ -345,15 +422,24 @@ def chat(payload: ChatRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=400, detail="Missing OPENAI_API_KEY")
 
     try:
-        history = [item.model_dump() for item in payload.history]
+        session_id = _get_or_create_session(payload.session_id)
+        session_history = SESSION_STORE[session_id].get("history", [])
+        request_history = [item.model_dump() for item in payload.history]
+        merged_history = [*session_history, *request_history]
+        session_context_note = _build_session_context(SESSION_STORE[session_id])
+
         reply, used_model = chat_with_clinician(
             openai_key=openai_key,
             user_message=payload.message,
             language=payload.language,
-            history=history,
+            history=merged_history,
+            session_context_note=session_context_note,
             model=payload.model,
             temperature=payload.temperature,
         )
+
+        _append_session_history(session_id, "user", payload.message, payload.language)
+        _append_session_history(session_id, "assistant", reply, payload.language)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
@@ -364,6 +450,8 @@ def chat(payload: ChatRequest) -> Dict[str, Any]:
         "reply": reply,
         "model": used_model,
         "roleplay": "trained_clinician",
+        "session_id": session_id,
+        "session_turns": len(SESSION_STORE.get(session_id, {}).get("history", [])) // 2,
     }
 
 
@@ -380,20 +468,46 @@ def diagnose(payload: DiagnoseRequest) -> Dict[str, Any]:
 
     openrouter_key = get_env("OPENROUTER_KEY")
     diagnosis = call_diagnosis(openrouter_key, user_message, payload.language)
+    return {"success": True, "data": diagnosis}
 
-    clinics = []
-    lat, lng = _resolve_coords(payload)
-    if lat is not None and lng is not None:
-        top_condition = diagnosis.get("conditions", [{}])[0].get("name", "")
-        foursquare_key = get_env("FOURSQUARE_API_KEY") or get_env("GOOGLE_PLACES_KEY")
-        clinics = find_nearby_clinics(
-            lat=lat,
-            lng=lng,
-            condition_name=top_condition,
-            foursquare_key=foursquare_key,
-        )
 
-    return {"success": True, "data": diagnosis, "clinics": clinics}
+@app.post("/api/clinics")
+def clinics(payload: ClinicsRequest) -> Dict[str, Any]:
+    lat = payload.lat if payload.lat is not None else payload.latitude
+    lng = payload.lng if payload.lng is not None else payload.longitude
+
+    if payload.coordinates:
+        if lat is None:
+            lat = payload.coordinates.get("lat", payload.coordinates.get("latitude"))
+        if lng is None:
+            lng = payload.coordinates.get("lng", payload.coordinates.get("longitude"))
+
+    if lat is None or lng is None:
+        raise HTTPException(status_code=400, detail="Missing lat/lng (or latitude/longitude/coordinates)")
+
+    condition_name = _first_non_empty(payload.condition_name, payload.query, payload.user_message)
+    if not condition_name:
+        condition_name = "clinic"
+
+    foursquare_key = get_env("FOURSQUARE_API_KEY") or get_env("GOOGLE_PLACES_KEY")
+    if not foursquare_key:
+        raise HTTPException(status_code=400, detail="Missing FOURSQUARE_API_KEY (or GOOGLE_PLACES_KEY)")
+
+    results = find_nearby_clinics(
+        lat=lat,
+        lng=lng,
+        condition_name=condition_name,
+        foursquare_key=foursquare_key,
+        radius_meters=payload.radius_meters,
+        max_results=payload.max_results,
+    )
+
+    return {
+        "success": True,
+        "condition_name": condition_name,
+        "origin": {"lat": lat, "lon": lng},
+        "results": results,
+    }
 
 
 @app.post("/api/tts")

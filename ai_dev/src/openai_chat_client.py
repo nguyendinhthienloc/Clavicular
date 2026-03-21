@@ -58,9 +58,18 @@ def _build_messages(
     user_message: str,
     language: Literal["en", "vi"],
     history: Optional[List[Dict[str, str]]] = None,
+    session_context_note: Optional[str] = None,
 ) -> List[Dict[str, str]]:
     system_prompt = SYSTEM_PROMPT_VI if language == "vi" else SYSTEM_PROMPT_EN
     messages: List[Dict[str, str]] = [{"role": "system", "content": system_prompt}]
+
+    if session_context_note and session_context_note.strip():
+        messages.append(
+            {
+                "role": "system",
+                "content": f"Session context for personalization: {session_context_note.strip()}",
+            }
+        )
 
     if history:
         for item in history:
@@ -78,13 +87,19 @@ def chat_with_clinician(
     user_message: str,
     language: Literal["en", "vi"] = "en",
     history: Optional[List[Dict[str, str]]] = None,
+    session_context_note: Optional[str] = None,
     model: str = DEFAULT_CHAT_MODEL,
     temperature: float = 0.4,
 ) -> Tuple[str, str]:
     if not openai_key:
         raise ValueError("Missing OPENAI_API_KEY")
 
-    messages = _build_messages(user_message=user_message, language=language, history=history)
+    messages = _build_messages(
+        user_message=user_message,
+        language=language,
+        history=history,
+        session_context_note=session_context_note,
+    )
 
     response = requests.post(
         OPENAI_CHAT_URL,
