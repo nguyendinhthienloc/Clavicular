@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 import requests
 
 
-PLACES_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+PLACES_URL = "https://places-api.foursquare.com/places/search"
 
 CONDITION_KEYWORDS = {
     "muscle": "orthopedic physiotherapy sports medicine",
@@ -42,11 +42,11 @@ def find_nearby_clinics(
     lat: float,
     lng: float,
     condition_name: str,
-    google_key: str,
+    foursquare_key: str,
     radius_meters: int = 3000,
     max_results: int = 3,
 ) -> List[Dict[str, Any]]:
-    if not google_key or lat is None or lng is None:
+    if not foursquare_key or lat is None or lng is None:
         return []
 
     keyword = get_keyword_for_condition(condition_name)
@@ -54,12 +54,17 @@ def find_nearby_clinics(
     try:
         response = requests.get(
             PLACES_URL,
+            headers={
+                "Authorization": f"Bearer {foursquare_key}",
+                "Accept": "application/json",
+                "X-Places-Api-Version": "2025-06-17",
+            },
             params={
-                "location": f"{lat},{lng}",
+                "ll": f"{lat},{lng}",
                 "radius": radius_meters,
-                "type": "hospital",
-                "keyword": keyword,
-                "key": google_key,
+                "query": keyword,
+                "categories": "15014,15007",  # hospitals, clinics
+                "limit": max_results,
             },
             timeout=10,
         )
@@ -68,20 +73,29 @@ def find_nearby_clinics(
 
         clinics: List[Dict[str, Any]] = []
         for result in results[:max_results]:
-            loc = result.get("geometry", {}).get("location", {})
+            # Handle new v3 API field format (direct latitude/longitude)
+            fsq_lat = result.get("latitude") or result.get("geocodes", {}).get("main", {}).get("latitude")
+            fsq_lng = result.get("longitude") or result.get("geocodes", {}).get("main", {}).get("longitude")
+            
+            # Get address from new format or fallback to old
+            address = result.get("location", {}).get("formatted_address", "")
+            if not address:
+                address = result.get("formatted_address", "")
+            
             clinics.append(
                 {
                     "name": result.get("name"),
-                    "address": result.get("vicinity"),
+                    "address": address,
                     "rating": result.get("rating"),
-                    "open_now": result.get("opening_hours", {}).get("open_now"),
+                    "open_now": result.get("hours", {}).get("open_now"),
                     "maps_url": (
                         "https://www.google.com/maps/search/?api=1"
-                        f"&query={loc.get('lat')},{loc.get('lng')}"
+                        f"&query={fsq_lat},{fsq_lng}"
                     ),
                 }
             )
         return clinics
-    except Exception:
+    except Exception as e:
         # Fail silently so diagnosis remains available even if Places fails.
+        print(f"[FOURSQUARE ERROR] {type(e).__name__}: {str(e)}")
         return []

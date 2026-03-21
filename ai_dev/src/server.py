@@ -285,12 +285,12 @@ def diagnose(payload: DiagnoseRequest) -> Dict[str, Any]:
     clinics = []
     if payload.lat is not None and payload.lng is not None:
         top_condition = diagnosis.get("conditions", [{}])[0].get("name", "")
-        google_key = get_env("GOOGLE_PLACES_KEY")
+        foursquare_key = get_env("FOURSQUARE_API_KEY") or get_env("GOOGLE_PLACES_KEY")
         clinics = find_nearby_clinics(
             lat=payload.lat,
             lng=payload.lng,
             condition_name=top_condition,
-            google_key=google_key,
+            foursquare_key=foursquare_key,
         )
 
     return {"success": True, "data": diagnosis, "clinics": clinics}
