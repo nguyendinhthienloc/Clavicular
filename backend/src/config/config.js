@@ -19,6 +19,10 @@ const config = {
 
 	openai: {
 		APIKey: process.env.OPENAI_API_KEY
+	},
+
+	locAI: {
+		baseURL: process.env.LOCAI_BASE_URL
 	}
 }
 
