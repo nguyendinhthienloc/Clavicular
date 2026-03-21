@@ -14,6 +14,7 @@ This folder is dedicated to Thien Loc's AI development and is intentionally sepa
 
 1. Ensure project root `.env` has at least:
    - `OPENROUTER_KEY=...`
+  - `OPENAI_API_KEY=...`
    - `ELEVENLABS_KEY=...`
 2. Install deps:
    - `d:/Hackathon_Clavicular/.venv/Scripts/python.exe -m pip install -r ai_dev/requirements.txt`
@@ -33,6 +34,13 @@ This folder is dedicated to Thien Loc's AI development and is intentionally sepa
     - Add geolocation for nearest clinics:
       - `{ "user_message": "...", "language": "en", "lat": 10.7295, "lng": 106.7228 }`
       - Also supported: `latitude`/`longitude` or `coordinates: { "lat": ..., "lng": ... }`
+
+- Chat endpoint (ChatGPT roleplays a trained clinician):
+  - `POST http://localhost:8000/api/chat`
+  - Body:
+    - `{ "message": "I have fever and sore throat for 2 days.", "language": "en" }`
+    - Optional conversation memory:
+      - `{ "message": "Now I also have chest pain", "language": "en", "history": [{ "role": "user", "content": "I had fever for 2 days" }, { "role": "assistant", "content": "Do you have shortness of breath?" }] }`
 
 ## Stable API smoke tests (recommended for all computers)
 
