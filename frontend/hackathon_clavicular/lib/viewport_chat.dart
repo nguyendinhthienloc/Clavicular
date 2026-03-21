@@ -11,6 +11,7 @@ class ViewportChat extends StatefulWidget {
     required this.onThemeChanged,
     required this.selectedViewport,
     required this.onViewportChanged,
+    this.selectedBodyParts = const <String>[],
     this.injectedAssistantMessage,
     this.injectedAssistantVersion = 0,
   });
@@ -19,6 +20,7 @@ class ViewportChat extends StatefulWidget {
   final ValueChanged<bool> onThemeChanged;
   final String selectedViewport;
   final ValueChanged<String> onViewportChanged;
+  final List<String> selectedBodyParts;
   final String? injectedAssistantMessage;
   final int injectedAssistantVersion;
 
@@ -35,6 +37,7 @@ class _ViewportChatState extends State<ViewportChat>
   bool _isTyping = false;
   bool _hasSentFirstMessage = false;
   bool _isLoading = false;
+  bool _hasDiagnosis = false;
   int _lastInjectedAssistantVersion = -1;
 
   @override
@@ -55,6 +58,146 @@ class _ViewportChatState extends State<ViewportChat>
         _isTyping = typing;
       });
     }
+  }
+
+  Future<void> _fetchSourcesFromChat() async {
+    if (_isLoading) {
+      return;
+    }
+
+    if (!_hasDiagnosis) {
+      return;
+    }
+
+    final List<String> bodyParts = widget.selectedBodyParts
+        .map((String value) => value.trim())
+        .where(
+          (String value) => value.isNotEmpty && value != 'Nothing selected',
+        )
+        .toList();
+
+    if (bodyParts.isEmpty) {
+      setState(() {
+        _messages.add(
+          const _ChatMessage(
+            text:
+                'Please select at least one body part before requesting diagnosis.',
+            isUser: false,
+          ),
+        );
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final Response<dynamic> sourcesResponse = await _dio
+          .post<dynamic>(
+            '${AppConfig.apiEndpoint}/ai/sources',
+            data: <String, dynamic>{
+              'bodyParts': bodyParts,
+              'severity': 'Mild',
+              'painType': 'sharp',
+              'duration': '< 1 week',
+              'trigger': 'Rest',
+              'lat': null,
+              'lng': null,
+            },
+            options: Options(
+              receiveTimeout: const Duration(seconds: 30),
+              sendTimeout: const Duration(seconds: 30),
+            ),
+          )
+          .timeout(const Duration(seconds: 35));
+
+      final String sourcesMarkdown = _buildSourcesMarkdown(
+        sourcesResponse.data,
+      );
+
+      setState(() {
+        _messages.add(_ChatMessage(text: sourcesMarkdown, isUser: false));
+      });
+    } on DioException catch (error) {
+      setState(() {
+        _messages.add(
+          _ChatMessage(
+            text: 'Sources request failed: ${error.message}',
+            isUser: false,
+          ),
+        );
+      });
+    } catch (error) {
+      setState(() {
+        _messages.add(
+          _ChatMessage(text: 'Unexpected sources error: $error', isUser: false),
+        );
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _hasSentFirstMessage = true;
+        _isTyping = false;
+      });
+    }
+  }
+
+  String _buildSourcesMarkdown(dynamic responseData) {
+    if (responseData is! Map<String, dynamic>) {
+      return 'No sources found.';
+    }
+
+    final dynamic payload = responseData['payload'];
+    if (payload is! Map<String, dynamic>) {
+      return 'No sources found.';
+    }
+
+    final dynamic data = payload['data'];
+    if (data is! List || data.isEmpty) {
+      return 'No sources found.';
+    }
+
+    final List<String> renderedItems = <String>[];
+    final Set<String> seenKeys = <String>{};
+    for (final dynamic item in data) {
+      if (item is Map) {
+        final String articleLine = _buildSourceItemLine(item);
+        if (articleLine.isEmpty) {
+          continue;
+        }
+
+        final dynamic idValue = item['id'];
+        final dynamic titleValue = item['title'];
+        final dynamic urlValue = item['url'];
+        final String uniqueKey =
+            '${idValue ?? ''}|${titleValue ?? ''}|${urlValue ?? ''}';
+        if (seenKeys.contains(uniqueKey)) {
+          continue;
+        }
+        seenKeys.add(uniqueKey);
+        renderedItems.add(articleLine);
+      }
+    }
+
+    if (renderedItems.isEmpty) {
+      return 'No sources found.';
+    }
+
+    return '### Sources\n${renderedItems.join('\n')}';
+  }
+
+  String _buildSourceItemLine(Map<dynamic, dynamic> item) {
+    final String title = (item['title'] ?? '').toString().trim();
+    final String url = (item['url'] ?? '').toString().trim();
+
+    if (title.isEmpty || url.isEmpty) {
+      return '';
+    }
+
+    return '- $title - $url';
   }
 
   Future<void> _sendMessage() async {
@@ -186,6 +329,7 @@ class _ViewportChatState extends State<ViewportChat>
           _messages.add(_ChatMessage(text: text, isUser: false));
           _hasSentFirstMessage = true;
           _isTyping = false;
+          _hasDiagnosis = true;
         });
       }
       _lastInjectedAssistantVersion = widget.injectedAssistantVersion;
@@ -234,12 +378,9 @@ class _ViewportChatState extends State<ViewportChat>
     final Color controlIconColor = isDarkMode
         ? const Color(0xFFBEBEBE)
         : const Color(0xFF4B5563);
-    final Color footerTextColor = isDarkMode
-        ? const Color(0xFFC8C8C8)
-        : const Color(0xFF6B7280);
-    final Color dropdownText = isDarkMode
-        ? const Color(0xFFEAF1FF)
-        : Colors.white;
+    final Color disabledIconColor = isDarkMode
+        ? const Color(0xFF6E6E6E)
+        : const Color(0xFF9CA3AF);
     final String viewportValue =
         (widget.selectedViewport == 'chat' ||
             widget.selectedViewport == 'diagnosis')
@@ -265,302 +406,374 @@ class _ViewportChatState extends State<ViewportChat>
               gradient: animatedOutlineGradient,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Container(
-              margin: const EdgeInsets.all(1.4),
-              decoration: BoxDecoration(
-                color: viewportBackground,
-                border: Border.all(color: viewportBorder),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Scaffold(
-                backgroundColor: viewportBackground,
-                body: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-                      child: Align(
-                        alignment: Alignment.topLeft,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: animatedOutlineGradient,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 2,
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: viewportValue,
-                                iconEnabledColor: dropdownText,
-                                dropdownColor: isDarkMode
-                                    ? const Color(0xFF0E1B38)
-                                    : const Color(0xFF2563EB),
-                                style: GoogleFonts.montserrat(
-                                  color: dropdownText,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 18,
-                                ),
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'chat',
-                                    child: Text('chat'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'diagnosis',
-                                    child: Text('diagnosis'),
-                                  ),
-                                ],
-                                onChanged: (String? value) {
-                                  if (value == null) return;
-                                  widget.onViewportChanged(value);
-                                },
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Stack(
-                        children: [
-                          if (hasMessages)
-                            ListView.builder(
-                              padding: const EdgeInsets.all(16),
-                              itemCount:
-                                  _messages.length + (_isLoading ? 1 : 0),
-                              itemBuilder: (BuildContext context, int index) {
-                                if (_isLoading && index == _messages.length) {
-                                  return Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Container(
-                                      margin: const EdgeInsets.symmetric(
-                                        vertical: 6,
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                        vertical: 10,
-                                      ),
-                                      constraints: const BoxConstraints(
-                                        maxWidth: 420,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: bubbleAssistant,
-                                        borderRadius: BorderRadius.circular(14),
-                                        border: Border.all(color: bubbleBorder),
-                                      ),
-                                      child: SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                bodyTextColor,
-                                              ),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }
-                                final _ChatMessage message = _messages[index];
-                                return Align(
-                                  alignment: message.isUser
-                                      ? Alignment.centerRight
-                                      : Alignment.centerLeft,
-                                  child: Container(
-                                    margin: const EdgeInsets.symmetric(
-                                      vertical: 6,
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 10,
-                                    ),
-                                    constraints: const BoxConstraints(
-                                      maxWidth: 420,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: message.isUser
-                                          ? bubbleUser
-                                          : bubbleAssistant,
-                                      borderRadius: BorderRadius.circular(14),
-                                      border: Border.all(color: bubbleBorder),
-                                    ),
-                                    child: message.isUser
-                                        ? Text(
-                                            message.text,
-                                            style: GoogleFonts.montserrat(
-                                              color: bodyTextColor,
-                                            ),
-                                          )
-                                        : MarkdownBody(
-                                            data: message.text,
-                                            selectable: true,
-                                            styleSheet: MarkdownStyleSheet(
-                                              p: GoogleFonts.montserrat(
-                                                color: bodyTextColor,
-                                                fontSize: 14,
-                                              ),
-                                              h1: GoogleFonts.montserrat(
-                                                color: bodyTextColor,
-                                                fontSize: 22,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                              h2: GoogleFonts.montserrat(
-                                                color: bodyTextColor,
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                              h3: GoogleFonts.montserrat(
-                                                color: bodyTextColor,
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                              listBullet:
-                                                  GoogleFonts.montserrat(
-                                                    color: bodyTextColor,
-                                                  ),
-                                              code: GoogleFonts.robotoMono(
-                                                color: bodyTextColor,
-                                                fontSize: 13,
-                                              ),
-                                              codeblockDecoration:
-                                                  BoxDecoration(
-                                                    color: isDarkMode
-                                                        ? const Color(
-                                                            0xFF1B1B1B,
-                                                          )
-                                                        : const Color(
-                                                            0xFFF1F5F9,
-                                                          ),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          8,
-                                                        ),
-                                                  ),
-                                            ),
-                                          ),
-                                  ),
-                                );
-                              },
-                            ),
-                          if (!hasMessages)
-                            IgnorePointer(
-                              child: Center(
-                                child: AnimatedOpacity(
-                                  duration: const Duration(milliseconds: 250),
-                                  opacity: _isTyping ? 0.35 : 0.5,
-                                  child: Text(
-                                    'Start a conversation',
-                                    style: GoogleFonts.montserrat(
-                                      color: heroTextColor,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    SafeArea(
-                      top: false,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 14),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: double.infinity,
-                              height: 75,
+            child: Padding(
+              padding: const EdgeInsets.all(1.4),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8.6),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: viewportBackground,
+                    border: Border.all(color: viewportBorder),
+                    borderRadius: BorderRadius.circular(8.6),
+                  ),
+                  child: Material(
+                    color: viewportBackground,
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                          child: Align(
+                            alignment: Alignment.topLeft,
+                            child: Container(
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(26),
+                                borderRadius: BorderRadius.circular(12),
                                 color: composerBackground,
                                 border: Border.all(color: viewportBorder),
                               ),
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  18,
-                                  12,
-                                  12,
-                                  12,
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.add,
-                                      color: controlIconColor,
-                                      size: 30,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _ViewportToggleButton(
+                                      label: 'chat',
+                                      selected: viewportValue == 'chat',
+                                      isDarkMode: isDarkMode,
+                                      gradient: animatedOutlineGradient,
+                                      onTap: () =>
+                                          widget.onViewportChanged('chat'),
                                     ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: TextField(
-                                        controller: _controller,
-                                        maxLines: 1,
-                                        textInputAction: TextInputAction.send,
-                                        style: GoogleFonts.montserrat(
-                                          color: inputTextColor,
-                                          fontSize: 16,
-                                        ),
-                                        decoration: InputDecoration(
-                                          hintText: 'How can I help you today?',
-                                          hintStyle: GoogleFonts.montserrat(
-                                            color: inputHintColor,
-                                            fontSize: 18,
-                                          ),
-                                          border: InputBorder.none,
-                                        ),
-                                        onSubmitted: (_) => _sendMessage(),
-                                      ),
+                                  ),
+                                  Expanded(
+                                    child: _ViewportToggleButton(
+                                      label: 'diagnosis',
+                                      selected: viewportValue == 'diagnosis',
+                                      isDarkMode: isDarkMode,
+                                      gradient: animatedOutlineGradient,
+                                      onTap: () =>
+                                          widget.onViewportChanged('diagnosis'),
                                     ),
-                                    const SizedBox(width: 16),
-                                    IconButton(
-                                      onPressed: _sendMessage,
-                                      icon: ShaderMask(
-                                        shaderCallback: (Rect bounds) {
-                                          return animatedOutlineGradient
-                                              .createShader(bounds);
-                                        },
-                                        blendMode: BlendMode.srcIn,
-                                        child: const Icon(
-                                          Icons.send_rounded,
-                                          color: Colors.white,
-                                          size: 28,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Padding(
-                                padding: const EdgeInsets.only(left: 10),
-                                child: Text(
-                                  'Connect your tools to Assistant',
-                                  style: GoogleFonts.montserrat(
-                                    color: footerTextColor,
-                                    fontSize: 14,
+                          ),
+                        ),
+                        Expanded(
+                          child: Stack(
+                            children: [
+                              if (hasMessages)
+                                ListView.builder(
+                                  padding: const EdgeInsets.all(16),
+                                  itemCount:
+                                      _messages.length + (_isLoading ? 1 : 0),
+                                  itemBuilder: (BuildContext context, int index) {
+                                    if (_isLoading &&
+                                        index == _messages.length) {
+                                      return Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Container(
+                                          margin: const EdgeInsets.symmetric(
+                                            vertical: 6,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 14,
+                                            vertical: 10,
+                                          ),
+                                          constraints: const BoxConstraints(
+                                            maxWidth: 420,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: bubbleAssistant,
+                                            borderRadius: BorderRadius.circular(
+                                              14,
+                                            ),
+                                            border: Border.all(
+                                              color: bubbleBorder,
+                                            ),
+                                          ),
+                                          child: SizedBox(
+                                            width: 24,
+                                            height: 24,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                    bodyTextColor,
+                                                  ),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                    final _ChatMessage message =
+                                        _messages[index];
+                                    return Align(
+                                      alignment: message.isUser
+                                          ? Alignment.centerRight
+                                          : Alignment.centerLeft,
+                                      child: Container(
+                                        margin: const EdgeInsets.symmetric(
+                                          vertical: 6,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 10,
+                                        ),
+                                        constraints: const BoxConstraints(
+                                          maxWidth: 420,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: message.isUser
+                                              ? bubbleUser
+                                              : bubbleAssistant,
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
+                                          border: Border.all(
+                                            color: bubbleBorder,
+                                          ),
+                                        ),
+                                        child: message.isUser
+                                            ? Text(
+                                                message.text,
+                                                style: GoogleFonts.montserrat(
+                                                  color: bodyTextColor,
+                                                ),
+                                              )
+                                            : MarkdownBody(
+                                                data: message.text,
+                                                selectable: true,
+                                                styleSheet: MarkdownStyleSheet(
+                                                  p: GoogleFonts.montserrat(
+                                                    color: bodyTextColor,
+                                                    fontSize: 14,
+                                                  ),
+                                                  h1: GoogleFonts.montserrat(
+                                                    color: bodyTextColor,
+                                                    fontSize: 22,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                  h2: GoogleFonts.montserrat(
+                                                    color: bodyTextColor,
+                                                    fontSize: 20,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                  h3: GoogleFonts.montserrat(
+                                                    color: bodyTextColor,
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                  listBullet:
+                                                      GoogleFonts.montserrat(
+                                                        color: bodyTextColor,
+                                                      ),
+                                                  code: GoogleFonts.robotoMono(
+                                                    color: bodyTextColor,
+                                                    fontSize: 13,
+                                                  ),
+                                                  codeblockDecoration:
+                                                      BoxDecoration(
+                                                        color: isDarkMode
+                                                            ? const Color(
+                                                                0xFF1B1B1B,
+                                                              )
+                                                            : const Color(
+                                                                0xFFF1F5F9,
+                                                              ),
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                      ),
+                                                ),
+                                              ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              if (!hasMessages)
+                                IgnorePointer(
+                                  child: Center(
+                                    child: AnimatedOpacity(
+                                      duration: const Duration(
+                                        milliseconds: 250,
+                                      ),
+                                      opacity: _isTyping ? 0.35 : 0.5,
+                                      child: Text(
+                                        'Start a conversation',
+                                        style: GoogleFonts.montserrat(
+                                          color: heroTextColor,
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
+                        SafeArea(
+                          top: false,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 8, 12, 14),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: double.infinity,
+                                  height: 75,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(26),
+                                    color: composerBackground,
+                                    border: Border.all(color: viewportBorder),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      18,
+                                      12,
+                                      12,
+                                      12,
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        IconButton(
+                                          onPressed:
+                                              (_hasDiagnosis && !_isLoading)
+                                              ? _fetchSourcesFromChat
+                                              : null,
+                                          icon: Icon(
+                                            Icons.pages_rounded,
+                                            color:
+                                                (_hasDiagnosis && !_isLoading)
+                                                ? controlIconColor
+                                                : disabledIconColor,
+                                            size: 30,
+                                          ),
+                                          tooltip: _hasDiagnosis
+                                              ? (_isLoading
+                                                    ? 'Loading sources...'
+                                                    : 'Get sources')
+                                              : 'Run diagnosis first',
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: TextField(
+                                            controller: _controller,
+                                            maxLines: 1,
+                                            textInputAction:
+                                                TextInputAction.send,
+                                            style: GoogleFonts.montserrat(
+                                              color: inputTextColor,
+                                              fontSize: 16,
+                                            ),
+                                            decoration: InputDecoration(
+                                              hintText:
+                                                  'How can I help you today?',
+                                              hintStyle: GoogleFonts.montserrat(
+                                                color: inputHintColor,
+                                                fontSize: 18,
+                                              ),
+                                              border: InputBorder.none,
+                                            ),
+                                            onSubmitted: (_) => _sendMessage(),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        IconButton(
+                                          onPressed: _sendMessage,
+                                          icon: ShaderMask(
+                                            shaderCallback: (Rect bounds) {
+                                              return animatedOutlineGradient
+                                                  .createShader(bounds);
+                                            },
+                                            blendMode: BlendMode.srcIn,
+                                            child: const Icon(
+                                              Icons.send_rounded,
+                                              color: Colors.white,
+                                              size: 28,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+class _ViewportToggleButton extends StatelessWidget {
+  const _ViewportToggleButton({
+    required this.label,
+    required this.selected,
+    required this.isDarkMode,
+    required this.gradient,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final bool isDarkMode;
+  final Gradient gradient;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color selectedTextColor = isDarkMode
+        ? const Color(0xFFEAF1FF)
+        : Colors.white;
+    final Color unselectedTextColor = isDarkMode
+        ? const Color(0xFFB7C3D7)
+        : const Color(0xFF4B5563);
+
+    return Padding(
+      padding: const EdgeInsets.all(4),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onTap,
+          child: Ink(
+            height: 36,
+            decoration: BoxDecoration(
+              gradient: selected ? gradient : null,
+              color: selected
+                  ? null
+                  : (isDarkMode
+                        ? const Color(0xFF2A2A2A)
+                        : const Color(0xFFFFFFFF)),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+              child: Text(
+                label,
+                style: GoogleFonts.montserrat(
+                  color: selected ? selectedTextColor : unselectedTextColor,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -748,3 +748,63 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
     );
   }
 }
+
+class _ViewportToggleButton extends StatelessWidget {
+  const _ViewportToggleButton({
+    required this.label,
+    required this.selected,
+    required this.isDarkMode,
+    required this.gradient,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final bool isDarkMode;
+  final Gradient gradient;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color selectedTextColor = isDarkMode
+        ? const Color(0xFFEAF1FF)
+        : Colors.white;
+    final Color unselectedTextColor = isDarkMode
+        ? const Color(0xFFB7C3D7)
+        : const Color(0xFF4B5563);
+
+    return Padding(
+      padding: const EdgeInsets.all(4),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onTap,
+          child: Ink(
+            height: 36,
+            decoration: BoxDecoration(
+              gradient: selected ? gradient : null,
+              color: selected
+                  ? null
+                  : (isDarkMode
+                        ? const Color(0xFF2A2A2A)
+                        : const Color(0xFFFFFFFF)),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+              child: Text(
+                label,
+                style: GoogleFonts.montserrat(
+                  color: selected ? selectedTextColor : unselectedTextColor,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

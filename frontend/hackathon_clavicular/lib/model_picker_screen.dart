@@ -567,6 +567,7 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                                     isDarkMode: isDarkMode,
                                     onThemeChanged: widget.onThemeChanged,
                                     selectedViewport: _selectedViewport,
+                                    selectedBodyParts: selectedBodyParts,
                                     injectedAssistantMessage:
                                         _injectedDiagnosisMessage,
                                     injectedAssistantVersion:
