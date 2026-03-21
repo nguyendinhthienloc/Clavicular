@@ -1,0 +1,7 @@
+{
+  "condition_name": "chest pain",
+  "lat": 10.7295,
+  "lng": 106.7228,
+  "radius_meters": 3000,
+  "max_results": 3
+}

@@ -31,9 +31,13 @@ This folder is dedicated to Thien Loc's AI development and is intentionally sepa
   - `POST http://localhost:8000/api/diagnose`
   - Body:
     - `{ "user_message": "Chest pressure, left arm pain, severity 9", "language": "en" }`
-    - Add geolocation for nearest clinics:
-      - `{ "user_message": "...", "language": "en", "lat": 10.7295, "lng": 106.7228 }`
-      - Also supported: `latitude`/`longitude` or `coordinates: { "lat": ..., "lng": ... }`
+
+- Clinics endpoint (separate from diagnosis):
+  - `POST http://localhost:8000/api/clinics`
+  - Body:
+    - `{ "condition_name": "chest pain", "lat": 10.7295, "lng": 106.7228 }`
+    - Also supported: `latitude`/`longitude` or `coordinates: { "lat": ..., "lng": ... }`
+  - Response includes recommended places with `lat` and `lon`.
 
 - Chat endpoint (ChatGPT roleplays a trained clinician):
   - `POST http://localhost:8000/api/chat`
@@ -41,6 +45,9 @@ This folder is dedicated to Thien Loc's AI development and is intentionally sepa
     - `{ "message": "I have fever and sore throat for 2 days.", "language": "en" }`
     - Optional conversation memory:
       - `{ "message": "Now I also have chest pain", "language": "en", "history": [{ "role": "user", "content": "I had fever for 2 days" }, { "role": "assistant", "content": "Do you have shortness of breath?" }] }`
+    - Session memory without login:
+      - Send optional `session_id`; if omitted, server returns a new `session_id`.
+      - Reuse returned `session_id` in later calls so chat becomes more personalized over that session.
 
 ## Stable API smoke tests (recommended for all computers)
 
