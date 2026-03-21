@@ -67,7 +67,11 @@ class AIService {
 				true,
 				200,
 				"Success",
-				text
+				{
+					data: res.data.data,
+					text: text,
+					clinics: res.data.clinics
+				}
 			)
 			return response;
 		} catch (err) {
