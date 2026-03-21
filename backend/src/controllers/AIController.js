@@ -60,7 +60,20 @@ class AIController {
 			const response = await AIService.sources(bodyParts, severity, painType, duration, trigger);
 			return void res.status(response.statusCode).json(response.get()); 
 		} catch (err) {
-			next(err)
+			next(err);
+		}
+	}
+
+	async clinics(req, res, next) {
+		try {
+			const conditionName = req.body.conditionName;
+			const lat = req.body.lat;
+			const lng = req.body.lng;
+
+			const response = await AIService.clinics(conditionName, lat, lng);
+			return void res.status(response.statusCode).json(response.get());
+		} catch (err) {
+			next(err);
 		}
 	}
 }
