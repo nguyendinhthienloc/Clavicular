@@ -44,7 +44,7 @@ class AIController {
 			const lat = req.body.lat;
 			const lng = req.body.lng;
 
-			const response = await AIService.sendPrompt(prompt, model);
+			const response = await AIService.diagnose(bodyParts, severity, painType, duration, trigger, lat, lng);
 			return void res.status(response.statusCode).json(response.get()); 
 		} catch (err) {
 			next(err)
