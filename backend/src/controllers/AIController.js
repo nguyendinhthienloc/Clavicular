@@ -87,6 +87,18 @@ class AIController {
 			next(err);
 		}
 	}
+
+	async transcribe(req, res, next) {
+		try {
+			const buffer = req.file.buffer;
+			console.log(buffer);
+
+			const response = await AIService.transcribe(buffer);
+			return void res.status(response.statusCode).json(response.get());
+		} catch (err) {
+			next(err);
+		}
+	}
 }
 
 export default new AIController();

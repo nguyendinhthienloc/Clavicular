@@ -3,6 +3,7 @@ import ServiceResponse from '../helper/ServiceResponse.js';
 import { GoogleGenAI, Language } from '@google/genai';
 import axios from 'axios';
 import OpenAI from 'openai'
+import FormData from 'form-data'
 const client = new OpenAI({
 	apiKey: config.openai.APIKey
 });
@@ -187,6 +188,34 @@ class AIService {
 			);
 			return response;
 		}
+	}
+
+	async transcribe(file) {
+		try {
+			const formData = new FormData();
+			formData.append('file', file, { filename: 'audio.mp3' });
+			console.log(file);
+			const res = await axios.post(`${this.locAIBaseURL}/api/transcribe`, formData, {
+				headers: formData.getHeaders()
+			});
+
+			const response = new ServiceResponse(
+				true,
+				200,
+				"Success",
+				res.data.text
+			);
+			return response;
+		} catch (err) {
+			const response = new ServiceResponse(
+				false,
+				502,
+				"Something went wrong",
+				err.toString()
+			);
+			return response;
+		}
+		
 	}
 }
 
