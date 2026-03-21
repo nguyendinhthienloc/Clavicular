@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "reply": "Thank you for sharing your concern, Alex. \n\n- Can you describe the severity of your migraine on a scale from 1 to 10?\n- Have you experienced any nausea or vomiting?\n- Are you currently taking any medications for the migraine?\n\nBased on your symptoms, it could be a migraine episode, possibly exacerbated by light sensitivity. \n\nNext steps:\n- If your pain is severe (7 or higher), or if you have nausea/vomiting, consider seeking medical attention today.\n- If the pain is manageable, try to rest in a dark, quiet room and consider over-the-counter pain relief if you have it available.\n\nPlease monitor your symptoms closely. If you experience any worsening or new symptoms, seek care immediately. \n\nThis is informational support and does not replace in-person medical care.",
+  "model": "gpt-4o-mini-2024-07-18",
+  "roleplay": "trained_clinician",
+  "session_id": "d8a6b888-5044-4aa4-84da-7168ac7acc2a",
+  "session_turns": 1
+}
