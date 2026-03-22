@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'dart:async';
 import 'dart:math' as math;
 import 'config/app_config.dart';
 
@@ -34,6 +35,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
   late final Dio _dio;
   AnimationController? _gradientController;
   AnimationController? _micPulseController;
+  AnimationController? _sendingBlinkController;
   final stt.SpeechToText _speechToText = stt.SpeechToText();
 
   String? _selectedSeverity;
@@ -44,6 +46,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
   bool _isSubmitting = false;
   bool _isLocating = false;
   bool _isListeningNotes = false;
+  bool _isRedirectingToChat = false;
   double? _lat;
   double? _lng;
   String? _locationStatus;
@@ -81,6 +84,10 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
     _micPulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
+    );
+    _sendingBlinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
     );
   }
 
@@ -165,6 +172,22 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
   Future<void> _stopNotesSpeechToText() async {
     try {
       await _speechToText.stop();
+    } finally {
+      _micPulseController?.stop();
+      _micPulseController?.value = 0;
+      if (mounted) {
+        setState(() {
+          _isListeningNotes = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _resetNotesSpeechToTextBuffer() async {
+    try {
+      await _speechToText.cancel();
+    } catch (_) {
+      // Ignore reset errors so diagnosis submission still proceeds.
     } finally {
       _micPulseController?.stop();
       _micPulseController?.value = 0;
@@ -265,9 +288,19 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
       return;
     }
 
+    final bool shouldResetVoiceInput =
+        _isListeningNotes || (_micPulseController?.isAnimating ?? false);
+    if (shouldResetVoiceInput) {
+      await _resetNotesSpeechToTextBuffer();
+    }
+
     setState(() {
       _isSubmitting = true;
+      _isRedirectingToChat = true;
     });
+    _sendingBlinkController?.repeat(reverse: true);
+
+    String message = 'No diagnosis review returned.';
 
     try {
       if (_useCurrentLocation) {
@@ -293,7 +326,6 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
           )
           .timeout(const Duration(seconds: 35));
 
-      String message = 'No diagnosis review returned.';
       final dynamic root = response.data;
       if (root is Map<String, dynamic>) {
         final dynamic payload = root['payload'];
@@ -302,23 +334,36 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
           message = extracted;
         }
       }
-
-      widget.onDiagnosisReady?.call(message);
     } on DioException catch (error) {
-      widget.onDiagnosisReady?.call(
-        'Failed to get diagnosis review.\n\n${error.message}',
-      );
+      message = 'Failed to get diagnosis review.\n\n${error.message}';
     } catch (error) {
-      widget.onDiagnosisReady?.call(
-        'Unexpected error while loading diagnosis review.\n\n$error',
-      );
+      message = 'Unexpected error while loading diagnosis review.\n\n$error';
     } finally {
+      _sendingBlinkController?.stop();
+      _sendingBlinkController?.value = 0;
       if (mounted) {
         setState(() {
           _isSubmitting = false;
         });
       }
     }
+
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+
+    if (!mounted) {
+      return;
+    }
+
+    widget.onDiagnosisReady?.call(message);
+
+    if (!mounted) {
+      return;
+    }
+
+    // Fallback reset if parent decides not to switch viewport immediately.
+    setState(() {
+      _isRedirectingToChat = false;
+    });
   }
 
   String _extractDiagnosisText(dynamic payload) {
@@ -363,6 +408,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
     _speechToText.stop();
     _notesController.dispose();
     _micPulseController?.dispose();
+    _sendingBlinkController?.dispose();
     _gradientController?.dispose();
     super.dispose();
   }
@@ -376,6 +422,10 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
     _micPulseController ??= AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
+    );
+    _sendingBlinkController ??= AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
     );
 
     final bool isDarkMode = widget.isDarkMode;
@@ -418,6 +468,9 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
     final List<Color> outlineColors = isDarkMode
         ? const [Color(0xFF60A5FA), Color(0xFF1D4ED8)]
         : const [Color(0xFF93C5FD), Color(0xFF2563EB)];
+    final Animation<double> sendingOpacity = _sendingBlinkController!
+      .drive(CurveTween(curve: Curves.easeInOut))
+      .drive(Tween<double>(begin: 0.45, end: 1));
 
     return AnimatedBuilder(
       animation: _gradientController!,
@@ -451,6 +504,54 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                 backgroundColor: viewportBackground,
                 body: LayoutBuilder(
                   builder: (BuildContext context, BoxConstraints constraints) {
+                    if (_isRedirectingToChat) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: SizedBox(
+                            width: 340,
+                            height: 58,
+                            child: ElevatedButton(
+                              onPressed: null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: composerBackground,
+                                disabledBackgroundColor: composerBackground,
+                                disabledForegroundColor: inputTextColor,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  side: BorderSide(color: composerBorder),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Flexible(
+                                    child: Text(
+                                      'Redirecting you to Chat...',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.montserrat(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
                     final bool compactHeight = constraints.maxHeight < 740;
                     final bool compactWidth = constraints.maxWidth < 430;
                     final double horizontalPadding = compactWidth ? 12 : 16;
@@ -515,6 +616,9 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                             child: Column(
                               children: [
                             DropdownButtonFormField<String>(
+                              key: ValueKey<String>(
+                                'body-parts-$selectedBodyPartsLabel',
+                              ),
                               initialValue: selectedBodyPartsLabel,
                               isExpanded: true,
                               decoration: InputDecoration(
@@ -558,7 +662,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                                   ),
                                 ];
                               },
-                              onChanged: (_) {},
+                              onChanged: _isSubmitting ? null : (_) {},
                             ),
                             SizedBox(height: fieldGap),
                             DropdownButtonFormField<String>(
@@ -597,7 +701,9 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                                   child: Text('Severe'),
                                 ),
                               ],
-                              onChanged: (value) {
+                              onChanged: _isSubmitting
+                                  ? null
+                                  : (value) {
                                 if (value == null) return;
                                 setState(() {
                                   _selectedSeverity = value;
@@ -641,7 +747,9 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                                   child: Text('Throbbing'),
                                 ),
                               ],
-                              onChanged: (value) {
+                              onChanged: _isSubmitting
+                                  ? null
+                                  : (value) {
                                 if (value == null) return;
                                 setState(() {
                                   _selectedPainType = value;
@@ -685,7 +793,9 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                                   child: Text('> 1 month'),
                                 ),
                               ],
-                              onChanged: (value) {
+                              onChanged: _isSubmitting
+                                  ? null
+                                  : (value) {
                                 if (value == null) return;
                                 setState(() {
                                   _selectedDuration = value;
@@ -729,7 +839,9 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                                   child: Text('Sports'),
                                 ),
                               ],
-                              onChanged: (value) {
+                              onChanged: _isSubmitting
+                                  ? null
+                                  : (value) {
                                 if (value == null) return;
                                 setState(() {
                                   _selectedActivity = value;
@@ -769,7 +881,9 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                                       ),
                                       Switch(
                                         value: _useCurrentLocation,
-                                        onChanged: (bool value) {
+                                        onChanged: _isSubmitting
+                                            ? null
+                                            : (bool value) {
                                           setState(() {
                                             _useCurrentLocation = value;
                                           });
@@ -785,7 +899,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                                         WrapCrossAlignment.center,
                                     children: [
                                       TextButton.icon(
-                                        onPressed: _isLocating
+                                        onPressed: (_isLocating || _isSubmitting)
                                             ? null
                                             : () => _resolveCurrentLocation(),
                                         icon: _isLocating
@@ -854,6 +968,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                                       Expanded(
                                         child: TextField(
                                           controller: _notesController,
+                                          enabled: !_isSubmitting,
                                           maxLines: 1,
                                           textInputAction:
                                               TextInputAction.done,
@@ -977,7 +1092,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: ElevatedButton(
-                              onPressed: selectedBodyParts.isEmpty
+                              onPressed: selectedBodyParts.isEmpty || _isSubmitting
                                   ? null
                                   : _submitDiagnosis,
                               style: ElevatedButton.styleFrom(
@@ -990,14 +1105,26 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
                                 ),
                                 padding: EdgeInsets.zero,
                               ),
-                              child: Text(
-                                _isSubmitting ? 'Sending...' : 'Get Diagnosis',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.montserrat(
-                                  fontSize: submitFontSize,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
+                              child: _isSubmitting
+                                  ? FadeTransition(
+                                      opacity: sendingOpacity,
+                                      child: Text(
+                                        'Sending...',
+                                        textAlign: TextAlign.center,
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: submitFontSize,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    )
+                                  : Text(
+                                      'Get Diagnosis',
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: submitFontSize,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
                             ),
                           ),
                         ),

@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:convert';
+import 'dart:async';
 import 'dart:math' as math;
 import 'config/app_config.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -36,7 +37,7 @@ class ViewportChat extends StatefulWidget {
 }
 
 class _ViewportChatState extends State<ViewportChat>
-  with TickerProviderStateMixin {
+  with TickerProviderStateMixin, WidgetsBindingObserver {
   final TextEditingController _controller = TextEditingController();
   final List<_ChatMessage> _messages = [];
   late final Dio _dio;
@@ -49,12 +50,14 @@ class _ViewportChatState extends State<ViewportChat>
   bool _isListening = false;
   bool _hasDiagnosis = false;
   int _lastInjectedAssistantVersion = -1;
+  Completer<void>? _resumeCompleter;
   List<String> _conditionNames = <String>[];
   final stt.SpeechToText _speechToText = stt.SpeechToText();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _controller.addListener(_handleTypingState);
     _dio = Dio();
     _gradientController = AnimationController(
@@ -274,6 +277,12 @@ class _ViewportChatState extends State<ViewportChat>
   }
 
   Future<void> _sendMessage() async {
+    final bool shouldResetVoiceInput =
+        _isListening || (_micPulseController?.isAnimating ?? false);
+    if (shouldResetVoiceInput) {
+      await _resetSpeechToTextBuffer();
+    }
+
     final String text = _controller.text.trim();
     if (text.isEmpty) {
       return;
@@ -480,6 +489,22 @@ class _ViewportChatState extends State<ViewportChat>
     }
   }
 
+  Future<void> _resetSpeechToTextBuffer() async {
+    try {
+      await _speechToText.cancel();
+    } catch (_) {
+      // Ignore reset errors so sending still proceeds.
+    } finally {
+      _micPulseController?.stop();
+      _micPulseController?.value = 0;
+      if (mounted) {
+        setState(() {
+          _isListening = false;
+        });
+      }
+    }
+  }
+
   Future<void> _showLocationPrompt({
     required String title,
     required String message,
@@ -504,7 +529,10 @@ class _ViewportChatState extends State<ViewportChat>
             ),
             TextButton(
               onPressed: () async {
-                await onOpenSettings();
+                final bool opened = await onOpenSettings();
+                if (opened) {
+                  await _waitForAppResume();
+                }
                 if (context.mounted) {
                   Navigator.of(context).pop();
                 }
@@ -515,6 +543,26 @@ class _ViewportChatState extends State<ViewportChat>
         );
       },
     );
+  }
+
+  Future<void> _waitForAppResume() async {
+    _resumeCompleter = Completer<void>();
+    try {
+      await _resumeCompleter!.future.timeout(const Duration(seconds: 45));
+    } catch (_) {
+      // If resume isn't observed in time, continue with a normal retry path.
+    } finally {
+      _resumeCompleter = null;
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        _resumeCompleter != null &&
+        !_resumeCompleter!.isCompleted) {
+      _resumeCompleter!.complete();
+    }
   }
 
   Future<_UserLocation?> _resolveCurrentLocationForMap() async {
@@ -542,7 +590,13 @@ class _ViewportChatState extends State<ViewportChat>
               'Please allow location access so nearby places can be shown on the map.',
           onOpenSettings: Geolocator.openAppSettings,
         );
-        return null;
+        permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+        if (permission == LocationPermission.denied) {
+          return null;
+        }
       }
 
       if (permission == LocationPermission.deniedForever) {
@@ -552,7 +606,14 @@ class _ViewportChatState extends State<ViewportChat>
               'Location permission is permanently denied. Enable it in app settings to continue.',
           onOpenSettings: Geolocator.openAppSettings,
         );
-        return null;
+        permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+        if (permission == LocationPermission.deniedForever ||
+            permission == LocationPermission.denied) {
+          return null;
+        }
       }
 
       final Position position = await Geolocator.getCurrentPosition(
@@ -1032,6 +1093,7 @@ class _ViewportChatState extends State<ViewportChat>
   @override
   void dispose() {
     _speechToText.stop();
+    WidgetsBinding.instance.removeObserver(this);
     _micPulseController?.dispose();
     _controller.removeListener(_handleTypingState);
     _controller.dispose();
