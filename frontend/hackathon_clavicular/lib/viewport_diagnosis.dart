@@ -289,7 +289,7 @@ class _ViewportDiagnosisState extends State<ViewportDiagnosis>
     }
 
     final bool shouldResetVoiceInput =
-        _isListeningNotes || (_micPulseController?.isAnimating ?? false);
+        _isListeningNotes;
     if (shouldResetVoiceInput) {
       await _resetNotesSpeechToTextBuffer();
     }
