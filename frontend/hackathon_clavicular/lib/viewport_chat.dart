@@ -1532,7 +1532,7 @@ class _ViewportChatState extends State<ViewportChat>
                                           tooltip: _hasDiagnosis
                                               ? (_isLoading
                                                     ? 'Loading sources...'
-                                                    : 'find source from diagnosis')
+                                                    : 'Find source from diagnosis')
                                               : 'Run diagnosis first',
                                         ),
                                         IconButton(
@@ -1550,7 +1550,7 @@ class _ViewportChatState extends State<ViewportChat>
                                           ),
                                           tooltip: _isLoadingMap
                                               ? 'Loading map...'
-                                              : 'Show nearby places on map',
+                                              : 'Show nearby clinics on map',
                                         ),
                                         const SizedBox(width: 16),
                                         Expanded(
