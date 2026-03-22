@@ -277,8 +277,7 @@ class _ViewportChatState extends State<ViewportChat>
   }
 
   Future<void> _sendMessage() async {
-    final bool shouldResetVoiceInput =
-        _isListening || (_micPulseController?.isAnimating ?? false);
+    final bool shouldResetVoiceInput = _isListening;
     if (shouldResetVoiceInput) {
       await _resetSpeechToTextBuffer();
     }
