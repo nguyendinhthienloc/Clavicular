@@ -6,7 +6,7 @@ The **1st MVP** of this project was successfully completed during the **LotusHac
 
 ---
 
-## 🌟 Key Features
+## Key Features
 
 * **Interactive 3D Anatomical Body Map:** Uses a real 3D anatomical model (rendered via Three.js inside a Flutter Web iframe wrapper) that lets users orbit, zoom, and click specific muscle groups/organs to pinpoint pain regions.
 * **Dual-Language Route Optimization:** Natively supports both English and Vietnamese:
@@ -22,45 +22,58 @@ The **1st MVP** of this project was successfully completed during the **LotusHac
 
 ---
 
-## 🏗️ Architecture & Data Flow
+## Architecture & Data Flow
 
-```text
-               +-----------------------------------------+
-               |        Flutter Frontend Client          |
-               |  (3D Body Map UI + Speech/Text Input)   |
-               +--------------------+--------------------+
-                                    |
-                                    | HTTP Requests (REST)
-                                    v
-               +--------------------+--------------------+
-               |        Express API Gateway Backend      |
-               |        (Node.js / Request Router)       |
-               +--------------------+--------------------+
-                                    |
-                                    | HTTP Requests (Internal)
-                                    v
-               +--------------------+--------------------+
-               |         AI Microservice Engine          |
-               |          (Python / FastAPI)             |
-               +--------+-----+-----+-----+-----+--------+
-                        |     |     |     |     |
-      +-----------------+     |     |     |     +-----------------+
-      | (OpenRouter API)      |     |     | (ElevenLabs TTS/Whisper)|
-      v                       v     |     v                       v
-+-----+----+    +-------------+--+  |  +--+----------+    +-------+-----+
-| Claude/  |    |     Exa.ai     |  |  |  Foursquare |    |   FAL /     |
-|  Qwen    |    | (Medical Search|  |  |  Places API |    | Gemini Image|
-+----------+    +----------------+  |  +-------------+    +-------------+
-                                    v
-                            +-------+------+
-                            | OpenAI API   |
-                            | (Clinician)  |
-                            +--------------+
+### System Subsystems Diagram
+
+```mermaid
+graph TD
+    User([User Client]) -->|Interact| Flutter[Flutter Web/Mobile Client]
+    subgraph Frontend Subsystem
+        Flutter -->|IFrame Message| ThreeJS[Three.js 3D Model Picker]
+    end
+    Flutter -->|HTTP REST| Gateway[Express API Gateway Node.js]
+    subgraph Backend Subsystem
+        Gateway -->|JSON Schema Validation| Router[Routes/Controllers]
+    end
+    Router -->|Proxy Request| FastAPI[FastAPI AI Microservice Python]
+    subgraph AI Orchestrator
+        FastAPI -->|Orchestrate| Providers{API Clients}
+        Providers -->|TTS / STT| Eleven[ElevenLabs / Whisper]
+        Providers -->|Medical Reference| Exa[Exa.ai API]
+        Providers -->|Diagnosis Reasoning| OpenRouter[OpenRouter API]
+        Providers -->|Geo-Routing| Foursquare[Foursquare Places API]
+    end
+```
+
+### Sequence Triage Diagram
+
+```mermaid
+sequenceDiagram
+    actor User as Patient/User
+    participant Flutter as Flutter Frontend (Client)
+    participant Gateway as Node.js Express Gateway
+    participant FastAPI as FastAPI AI Microservice
+    participant LLM as OpenRouter (Claude/Qwen)
+    participant Exa as Exa.ai Search
+    participant Eleven as ElevenLabs (TTS/STT)
+
+    User->>Flutter: Interact with 3D Model & Describe Symptoms
+    Flutter->>Gateway: POST /api/ai/diagnose
+    Gateway->>FastAPI: POST /api/diagnose
+    FastAPI->>LLM: call_diagnosis()
+    LLM-->>FastAPI: Structured JSON Diagnosis
+    FastAPI-->>Gateway: ServiceResponse (JSON Diagnosis)
+    Gateway->>Gateway: Format clinician text (OpenAI gpt-5.4)
+    Gateway-->>Flutter: Clinician narrative + JSON data
+    Flutter->>Eleven: Convert text to audio (TTS)
+    Eleven-->>Flutter: Audio stream (played to patient)
+    Flutter->>User: Play Audio Triage & Display Nearby Clinics Map
 ```
 
 ---
 
-## 📂 Repository Structure
+## Repository Structure
 
 The project is structured into three main components:
 
@@ -71,7 +84,7 @@ The project is structured into three main components:
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Configure the Environment
 Copy the public-safe template to create your `.env` file in the **project root**:
@@ -140,7 +153,7 @@ Fill in the API keys in `.env`:
 
 ---
 
-## 👥 The Team (Hackathon Clavicular)
+## The Team (Hackathon Clavicular)
 
 We are a group of Computer Science students from the **APCS (Advanced Program in Computer Science)** and **CLC (High Quality Program)** divisions of the **IT Faculty at Ho Chi Minh City University of Science (HCMUS)**:
 
@@ -151,6 +164,13 @@ We are a group of Computer Science students from the **APCS (Advanced Program in
 
 ---
 
-## ⚠️ Medical Disclaimer
+## Medical Disclaimer
 
 > **BodyCheck is an AI tool for general informational support only and is not a substitute for professional medical advice, diagnosis, or treatment. If you are experiencing a medical emergency, please call 115 (or your local emergency services) immediately.**
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+
