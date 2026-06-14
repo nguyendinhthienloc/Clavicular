@@ -15,31 +15,35 @@
 
 % ---- Page geometry ----------------------------------------------------------
 \usepackage[
-  top=2.5cm, bottom=2.5cm,
-  left=2.8cm, right=2.8cm
+    top=2.5cm,
+    bottom=2.5cm,
+    left=2.8cm,
+    right=2.8cm
 ]{geometry}
 
 % ---- Typography & fonts -----------------------------------------------------
 \usepackage{microtype}
 \usepackage{setspace}
 \setstretch{1.10}
-\hbadness=10000   % suppress underfull hbox warnings from p-column tables
-
+\hbadness=10000
 
 % ---- Math -------------------------------------------------------------------
 \usepackage{amsmath}
 \usepackage{amssymb}
 
+% ---- Misc. ------------------------------------------------------------------
+\usepackage{csquotes}
+\usepackage[style=lncs, backend=biber, natbib=true]{biblatex}
+
 % ---- Tables -----------------------------------------------------------------
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{longtable}
-\usepackage{colortbl}
 
-% ---- Color (must come before titlesec and hyperref) -------------------------
+% ---- Color ------------------------------------------------------------------
 \usepackage[dvipsnames, svgnames, table]{xcolor}
 
-% --- Project colour palette (defined here so all packages can use them) ------
+% --- Project colour palette --------------------------------------------------
 \definecolor{clav-blue}{HTML}{1A73E8}
 \definecolor{clav-green}{HTML}{0D9276}
 \definecolor{clav-amber}{HTML}{F4A21B}
@@ -55,12 +59,12 @@
 \usepackage{graphicx}
 \usepackage{tikz}
 \usetikzlibrary{
-  shapes.geometric,
-  arrows.meta,
-  positioning,
-  fit,
-  backgrounds,
-  shadows.blur
+    shapes.geometric,
+    arrows.meta,
+    positioning,
+    fit,
+    backgrounds,
+    shadows.blur
 }
 
 % ---- Gantt chart ------------------------------------------------------------
@@ -69,59 +73,63 @@
 % ---- Captions ---------------------------------------------------------------
 \usepackage{caption}
 \captionsetup{
-  font=small,
-  labelfont=bf,
-  skip=6pt
+    font=small,
+    labelfont=bf,
+    skip=6pt
 }
 
 % ---- Lists ------------------------------------------------------------------
 \usepackage{enumitem}
 
-% ---- Section heading style (uses colours defined above) ---------------------
+% ---- Section heading style --------------------------------------------------
 \usepackage{titlesec}
 \titleformat{\section}[block]
-  {\large\bfseries\sffamily\color{clav-dark}}
-  {\thesection}{0.8em}{}
-  [\vspace{-4pt}\textcolor{clav-blue}{\rule{\linewidth}{1.2pt}}]
+    {\large\bfseries\sffamily\color{clav-dark}}
+    {\thesection}{0.8em}{}
+    [\vspace{-4pt}\textcolor{clav-blue}{\rule{\linewidth}{1.2pt}}]
 
 \titleformat{\subsection}[block]
-  {\normalsize\bfseries\sffamily\color{clav-dark}}
-  {\thesubsection}{0.6em}{}
+    {\normalsize\bfseries\sffamily\color{clav-dark}}
+    {\thesubsection}{0.6em}{}
 
-% ---- Hyperlinks (load LAST among packages) ----------------------------------
+% ---- Hyperlinks: load last --------------------------------------------------
 \usepackage[
-  colorlinks = true,
-  linkcolor  = clav-blue,
-  citecolor  = clav-green,
-  urlcolor   = clav-blue,
-  bookmarks  = true,
-  pdfusetitle
+    colorlinks = true,
+    linkcolor  = clav-blue,
+    citecolor  = clav-green,
+    urlcolor   = clav-blue,
+    bookmarks  = true,
+    pdfusetitle
 ]{hyperref}
+
 \hypersetup{
-  pdftitle   = {BodyCheck --- Project Feasibility Assessment},
-  pdfauthor  = {Team Clavicular, HCMUS},
-  pdfsubject = {LotusHacks 2026 Hackathon Proposal}
+    pdftitle   = {BodyCheck --- AI-Powered Medical Triage and 3D Symptom Checker},
+    pdfauthor  = {Team Clavicular, HCMUS},
+    pdfsubject = {LotusHacks 2026 Hackathon Proposal}
 }
 
-% ---- Figure search paths ---------------------------------------------------
+% ---- Figure search paths ----------------------------------------------------
 \graphicspath{{figures/}}
+
+% ---- Title metadata ---------------------------------------------------------
+\title{BodyCheck: AI-Powered Medical Triage \& 3D Symptom Checker}
+
+\author{
+    Team Clavicular\\[4pt]
+    Faculty of Information Technology, University of Science, Ho Chi Minh City, Vietnam\\
+    Vietnam National University, Ho Chi Minh City, Vietnam\\[4pt]
+    \texttt{\{24125092, 24125093, 24125102\}@apcs.fitus.edu.vn}
+}
+
+\date{\small\textcolor{clav-gray}{\today}}
 
 % =============================================================================
 \begin{document}
 
-% ---- Title block ------------------------------------------------------------
-\begin{center}
-  {\LARGE\bfseries\sffamily BodyCheck}\\[4pt]
-  {\large AI-Powered Medical Triage \& 3D Symptom Checker}\\[6pt]
-  {\normalsize Team Clavicular $\cdot$ HCMUS APCS/CLC
-               $\cdot$ LotusHacks 2026}\\[2pt]
-  {\small\textcolor{clav-gray}{\today}}
-\end{center}
-\vspace{8pt}
-{\color{clav-blue}\hrule height 0.8pt}
-\vspace{14pt}
+\maketitle
 
 % ---- Main content -----------------------------------------------------------
+\input{suitability}
 \input{feasibility}
 
 % =============================================================================
