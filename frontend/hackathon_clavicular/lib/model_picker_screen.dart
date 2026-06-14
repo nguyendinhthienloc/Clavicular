@@ -284,8 +284,6 @@ class _ModelPickerScreenState extends State<ModelPickerScreen>
                                     isDarkMode: isDarkMode,
                                     modelAssetPath: _currentModelAsset,
                                     isModelLocked: _isModelLocked,
-                                    isSelectionEnabled:
-                                        _selectedViewport == 'diagnosis',
                                     onSelectionChanged:
                                         (List<String>? partNames) {
                                           final List<String> resolvedParts =

@@ -12,11 +12,10 @@ The **1st MVP** of this project was successfully completed during the **LotusHac
 * **Dual-Language Route Optimization:** Natively supports both English and Vietnamese:
   * **English requests:** Routed to **Claude 3.5 Sonnet** (via OpenRouter) for clinical reasoning.
   * **Vietnamese requests:** Routed to **Qwen-2.5-72B-Instruct** for native, culturally fluent medical translation and localization.
-* **Multi-Modal AI Stack Integration:** Co-ordinates **6+ AI and Web APIs**:
+* **Multi-Modal AI Stack Integration:** Co-ordinates various AI and Web APIs:
   * **OpenRouter / OpenAI:** Outpatient clinician roleplay and diagnostics.
   * **Exa.ai:** Real-time authoritative medical citation retrieval (Mayo Clinic, WebMD, Healthline, Vinmec).
-  * **ElevenLabs:** Text-to-Speech natural readback in English & Vietnamese.
-  * **OpenAI Whisper:** Speech-to-Text symptom recording.
+  * **OpenAI Whisper:** Speech-to-Text symptom recording endpoint (available on server, unused by client).
   * **Foursquare / Places API:** Spatial clinic recommendations based on user coordinates.
 * **Decoupled Two-Tier Architecture:** Splits frontend public traffic from upstream AI models. The Node/Express backend serves as a secure API gateway, while the Python FastAPI service coordinates AI providers.
 
@@ -39,7 +38,7 @@ graph TD
     Router -->|Proxy Request| FastAPI[FastAPI AI Microservice Python]
     subgraph AI Orchestrator
         FastAPI -->|Orchestrate| Providers{API Clients}
-        Providers -->|TTS / STT| Eleven[ElevenLabs / Whisper]
+        Providers -->|STT (Server-only)| Whisper[OpenAI Whisper]
         Providers -->|Medical Reference| Exa[Exa.ai API]
         Providers -->|Diagnosis Reasoning| OpenRouter[OpenRouter API]
         Providers -->|Geo-Routing| Foursquare[Foursquare Places API]
@@ -56,7 +55,6 @@ sequenceDiagram
     participant FastAPI as FastAPI AI Microservice
     participant LLM as OpenRouter (Claude/Qwen)
     participant Exa as Exa.ai Search
-    participant Eleven as ElevenLabs (TTS/STT)
 
     User->>Flutter: Interact with 3D Model & Describe Symptoms
     Flutter->>Gateway: POST /api/ai/diagnose
@@ -66,9 +64,7 @@ sequenceDiagram
     FastAPI-->>Gateway: ServiceResponse (JSON Diagnosis)
     Gateway->>Gateway: Format clinician text (OpenAI gpt-5.4)
     Gateway-->>Flutter: Clinician narrative + JSON data
-    Flutter->>Eleven: Convert text to audio (TTS)
-    Eleven-->>Flutter: Audio stream (played to patient)
-    Flutter->>User: Play Audio Triage & Display Nearby Clinics Map
+    Flutter->>User: Display Diagnosis & Show Nearby Clinics Map
 ```
 
 ---
@@ -96,7 +92,8 @@ Fill in the API keys in `.env`:
 * `EXA_KEY`: Search key from Exa.ai.
 * `OPENAI_API_KEY`: Key from OpenAI (Whisper & Clinician Chat).
 * `FOURSQUARE_API_KEY`: API key from Foursquare/Google Places.
-* `ELEVENLABS_KEY`: Speech synthesis key from ElevenLabs.
+* `ELEVENLABS_KEY`: (Optional) Speech synthesis key (unused by client).
+
 
 ---
 

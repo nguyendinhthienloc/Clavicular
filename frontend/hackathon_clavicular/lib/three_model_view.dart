@@ -13,7 +13,6 @@ class ThreeModelView extends StatefulWidget {
     required this.isDarkMode,
     required this.modelAssetPath,
     required this.isModelLocked,
-    required this.isSelectionEnabled,
   }) : assert(
          onSelectionChanged != null || onPartSelected != null,
          'Provide onSelectionChanged or onPartSelected',
@@ -24,7 +23,6 @@ class ThreeModelView extends StatefulWidget {
   final bool isDarkMode;
   final String modelAssetPath;
   final bool isModelLocked;
-  final bool isSelectionEnabled;
 
   @override
   State<ThreeModelView> createState() => _ThreeModelViewState();
@@ -116,7 +114,6 @@ class _ThreeModelViewState extends State<ThreeModelView> {
       iframe.onLoad.listen((_) {
         _postThemeMode(widget.isDarkMode);
         _postLockState(widget.isModelLocked);
-        _postSelectionState(widget.isSelectionEnabled);
       });
 
       _iframe = iframe;
@@ -158,20 +155,6 @@ class _ThreeModelViewState extends State<ThreeModelView> {
     target.postMessage(message, '*');
   }
 
-  void _postSelectionState(bool isEnabled) {
-    final html.WindowBase? target = _iframe?.contentWindow;
-    if (target == null) {
-      return;
-    }
-
-    final String message = jsonEncode(<String, dynamic>{
-      'type': 'selection-state-changed',
-      'enabled': isEnabled,
-    });
-
-    target.postMessage(message, '*');
-  }
-
   @override
   void didUpdateWidget(covariant ThreeModelView oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -180,9 +163,6 @@ class _ThreeModelViewState extends State<ThreeModelView> {
     }
     if (oldWidget.isModelLocked != widget.isModelLocked) {
       _postLockState(widget.isModelLocked);
-    }
-    if (oldWidget.isSelectionEnabled != widget.isSelectionEnabled) {
-      _postSelectionState(widget.isSelectionEnabled);
     }
     if (oldWidget.modelAssetPath != widget.modelAssetPath) {
       _currentAssetPath = widget.modelAssetPath;

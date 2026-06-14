@@ -79,7 +79,6 @@
       let isSelectionStatusActive = false;
       let latestRotationLockState = false;
       let rotationLockHandler = null;
-      let isSelectionEnabled = false;
 
       function handleRotationLockMessage(nextState) {
         latestRotationLockState = nextState;
@@ -172,8 +171,6 @@
           applyTheme(data.mode === 'dark' ? 'dark' : 'light');
         } else if (data.type === 'lock-state-changed') {
           handleRotationLockMessage(Boolean(data.locked));
-        } else if (data.type === 'selection-state-changed') {
-          isSelectionEnabled = Boolean(data.enabled);
         }
       });
 
@@ -465,9 +462,6 @@
           }
 
           window.addEventListener('keydown', (event) => {
-            if (!isSelectionEnabled) {
-              return;
-            }
             if (event.code === 'Space') {
               event.preventDefault();
               if (!isHoverSelectHeld) {
@@ -484,9 +478,6 @@
           });
 
           window.addEventListener('keyup', (event) => {
-            if (!isSelectionEnabled) {
-              return;
-            }
             if (event.code === 'Space') {
               event.preventDefault();
               isHoverSelectHeld = false;
@@ -585,9 +576,6 @@
 
           function handlePointerMove(event) {
             updatePointerFromEvent(event);
-            if (!isSelectionEnabled) {
-              return;
-            }
             if (!isHoverSelectHeld) {
               return;
             }
@@ -609,9 +597,6 @@
           }
 
           function handleSelectionEvent(event) {
-            if (!isSelectionEnabled) {
-              return;
-            }
             if (
               event.type !== 'touchstart' &&
               event.pointerType !== 'touch' &&
