@@ -1,0 +1,558 @@
+% =============================================================================
+%  sec_feasibility.tex -- Section: Feasibility Assessment
+%  BodyCheck -- AI-Powered Medical Triage & 3D Symptom Checker
+%  Vietnamese Student HackAIthon 2026 -- Bang B (Challenger)
+%  Team Clavicular | HCMUS APCS/CLC
+%
+%  Pure content module -- include via \input{sec_feasibility}.
+%  All \definecolor declarations live in main.tex preamble.
+%
+%  Diagram images go in:  hackAIthon_latex/figures/
+%    arch_diagram.png    -- Mermaid source: PLACE_arch_diagram_HERE.txt
+%    gantt_roadmap.png   -- Mermaid source: PLACE_gantt_roadmap_HERE.txt
+% =============================================================================
+
+\section{Feasibility Assessment}
+\label{sec:feasibility}
+
+This section addresses the five feasibility sub-criteria defined in the
+Vietnamese Student HackAIthon 2026 Bang~B (Challenger) Round~1 rubric
+(\textit{Nhom tieu chi 3: Tinh kha thi} --- 25 points):
+legal data sourcing and qualified personnel; technical build and deployment
+viability; infrastructure and operational cost estimation; security and legal
+compliance under current Vietnamese law; and the post-competition GTM
+roadmap. Evidence is drawn from the team's direct engineering experience and
+the organiser-provided VNPT API ecosystem that will power the Round~2 build.
+
+Table~\ref{tab:feasibility_matrix} gives a structured overview; each dimension
+is examined in depth in the subsections that follow.
+
+% ---------------------------------------------------------------------------
+% Table 1 -- Five-Axis Feasibility Matrix
+% ---------------------------------------------------------------------------
+\begin{table}[htbp]
+  \centering
+  \caption{BodyCheck five-axis feasibility assessment aligned to the
+    HackAIthon 2026 Bang~B Round~1 rubric (25 pts total).
+    Risk ratings: \textcolor{clav-green}{\textbf{Low}} = controls in place;
+    \textcolor{clav-amber}{\textbf{Medium}} = mitigations identified.}
+  \label{tab:feasibility_matrix}
+  \setlength{\tabcolsep}{5pt}
+  \renewcommand{\arraystretch}{1.45}
+  \small
+  \begin{tabular}{@{} p{2.6cm} p{5.0cm} p{1.6cm} p{3.6cm} @{}}
+    \toprule
+    \textbf{Dimension} &
+    \textbf{Key Evidence} &
+    \textbf{Risk} &
+    \textbf{Current Status} \\
+    \midrule
+
+    Legal Data \& HR &
+    No PHI stored; VNPT APIs under organiser-provided access;
+    4-person HCMUS CS student team &
+    \textcolor{clav-green}{\textbf{Low}} &
+    Cleared for Round~1 proposal \\
+
+    Tech Build \& Deploy &
+    Three-tier Flutter / Node.js / FastAPI stack;
+    VNPT API integration path confirmed &
+    \textcolor{clav-green}{\textbf{Low}} &
+    Round~2 MVP deliverable within 8 days \\
+
+    Infra \& Costs &
+    VNPT APIs free in Round~2 (organiser-provisioned);
+    single low-cost compute instance post-competition &
+    \textcolor{clav-amber}{\textbf{Medium}} &
+    Post-competition billing TBD\textsuperscript{\dag} \\
+
+    Security \& Legal &
+    TLS enforced; vault secrets; AI disclaimer embedded;
+    general info tool classification at MVP stage &
+    \textcolor{clav-amber}{\textbf{Medium}} &
+    Clinical/legal review before public release \\
+
+    Roadmap \& GTM &
+    Three-phase post-competition plan; B2C + B2B2C channels;
+    12-month market expansion roadmap &
+    \textcolor{clav-green}{\textbf{Low}} &
+    Detailed in \S\ref{sec:feasibility-gtm} \\
+
+    \bottomrule
+  \end{tabular}
+
+  \smallskip\noindent
+  {\footnotesize \textsuperscript{\dag}Post-competition API pricing and
+  compute cost estimates will be confirmed once commercial VNPT tier
+  information is available (see \texttt{QUESTIONS\_for\_team.md}).}
+\end{table}
+
+% =============================================================================
+\subsection{Legal Data Acquisition and Human Resources}
+\label{sec:feasibility-hr}
+% =============================================================================
+
+\subsubsection*{Data Sourcing and Privacy Compliance}
+
+BodyCheck is architected to avoid handling protected health information (PHI)
+at the infrastructure level. Symptom descriptions entered by users are treated
+as transient, request-scoped payloads: they are forwarded to the AI reasoning
+layer, a structured clinical summary is generated, and the raw input is
+discarded without being written to any persistent store or log file in
+identifiable form.
+
+Medical reference content is retrieved at inference time from authoritative
+public-facing sources via API rather than ingested into a proprietary dataset.
+In Round~2 of the competition, this retrieval layer will be implemented using
+\textbf{VNPT Smartbot} (advanced LLM-backed question answering, API~4.2) and
+\textbf{VNPT SmartReader} (document OCR and information extraction, API~5.1/5.2),
+both provided by the organiser under the competition's API access agreement.
+This eliminates all data-licensing risk for the competition phase: every API
+call is governed by VNPT's enterprise terms and is explicitly sanctioned for
+participating teams by the organiser (\textit{Ban To chuc}).
+
+The system therefore operates without requiring independent data-collection
+agreements, proprietary patient datasets, or any form of model fine-tuning on
+personally identifiable health records.
+
+\subsubsection*{Team Composition and Skill Coverage}
+
+The team consists of four full-time undergraduate students from the Advanced
+Program in Computer Science (APCS) and the High-Quality Program (CLC) of the
+Faculty of Information Technology, Ho Chi Minh City University of Science
+(HCMUS). Each member holds unambiguous ownership of a distinct engineering
+domain:
+
+\begin{itemize}[leftmargin=2em, itemsep=2pt, topsep=4pt]
+  \item \textbf{AI Engineering} (\textit{Nguyen Dinh Thien Loc}):
+        LLM orchestration, VNPT Smartbot and SmartVoice integration,
+        FastAPI AI microservice design, and prompt engineering.
+  \item \textbf{Frontend / UI} (\textit{Quach Thien Lac}):
+        Flutter mobile/web client, Three.js 3D anatomical canvas
+        (iframe wrapper), and VNPT SmartUX analytics embedding.
+  \item \textbf{3D Asset Design} (\textit{Nguyen Quoc Nam}):
+        Blender modelling, GLB export and optimisation, and clickable
+        anatomical region mapping across three model files.
+  \item \textbf{Backend / Gateway} (\textit{Tran Ton Minh Ky}):
+        Node.js/Express API gateway, JSON schema validation middleware,
+        VNPT eKYC integration, and error-handling controllers.
+\end{itemize}
+
+All four members are currently enrolled full-time students, satisfying the
+eligibility criteria for Bang~B -- Challenger (up to five members per team,
+including an optional faculty advisor). The team is self-sufficient at the
+MVP scale required for Rounds~1 and~2. Post-competition scaling toward a
+production-grade platform would additionally require a DevOps/SRE engineer
+and a licensed medical content adviser.
+
+As a validation point, the team built and demonstrated a working first
+prototype of the core triage loop --- 3D body-part selection, symptom input,
+AI-generated clinical summary, and clinic geo-routing --- in a 72-hour sprint
+at a prior student hackathon, confirming that the stack is viable and that
+the team can deliver under time pressure.
+
+% =============================================================================
+\subsection{Technical Build and Deployment Feasibility}
+\label{sec:feasibility-tech}
+% =============================================================================
+
+\subsubsection*{Technology Stack Viability}
+
+BodyCheck employs a \emph{decoupled three-tier service architecture} that
+separates public-facing API traffic from the AI orchestration layer, making
+each tier independently testable, replaceable, and deployable:
+
+\begin{itemize}[leftmargin=2em, itemsep=2pt, topsep=4pt]
+  \item \textbf{Flutter Web/Mobile (Client Tier):}
+        A single Dart codebase compiles to native mobile (ARM) and
+        optimised web (Wasm/JS), so the same product ships as a PWA and
+        as a native app without a separate codebase. The interactive 3D
+        anatomical model is rendered by a Three.js scene embedded as an
+        iframe; region-selection events travel back to Flutter via
+        \texttt{postMessage}.
+  \item \textbf{Node.js 20 LTS / Express 5 (Gateway Tier):}
+        Handles CORS, JWT authentication, JSON Schema request validation,
+        and reverse-proxying to the AI microservice. Node's event-loop
+        model absorbs concurrent upstream API calls without thread contention.
+  \item \textbf{Python 3.12 / FastAPI (AI Orchestration Tier):}
+        ASGI-native, Pydantic-validated. FastAPI provides auto-generated
+        OpenAPI docs, sub-millisecond request parsing, and clean async
+        bindings for all VNPT client SDKs.
+  \item \textbf{VNPT API Ecosystem (Round~2):}
+        The organiser provides direct access to eight API families.
+        BodyCheck's planned integration uses:
+        SmartVoice STT (API~3.2) for voice symptom input;
+        SmartVoice TTS (API~3.1) for reading responses back to users
+        with accessibility needs;
+        SmartVoice call-summary (API~3.3) for distilling multi-turn
+        consultation transcripts into a structured summary;
+        Smartbot rule-based triage (API~4.1) for fast, deterministic
+        first-pass classification;
+        Smartbot advanced LLM (API~4.2) for open-ended differential
+        reasoning and follow-up chat;
+        SmartReader OCR and extraction (API~5.1/5.2) for parsing
+        user-uploaded medical documents, lab reports, and prescriptions;
+        SmartUX analytics (API~7.1) for in-app interaction telemetry
+        and friction-point identification;
+        vnSocial trend listening (API~6.1/6.2) for monitoring
+        health-topic sentiment on Vietnamese social media, surfacing
+        epidemic signals and common symptom clusters;
+        eKYC document OCR (API~1.1) for verified account creation in
+        the B2B2C institutional channel; and
+        SmartVision face detection (API~8.3) as an optional
+        telemedicine extension that confirms user presence before a
+        live consultation handoff.
+        Using the full breadth of the organiser-provided API catalogue
+        maximises the integration score in the Round~2 product
+        completion rubric and demonstrates the depth of the team's
+        engagement with the VNPT ecosystem.
+\end{itemize}
+
+Figure~\ref{fig:arch-diagram} shows the complete deployment topology,
+including the VNPT API integration layer.
+
+% ---------------------------------------------------------------------------
+% Figure 1 -- Architecture Diagram (Mermaid export)
+% ---------------------------------------------------------------------------
+\begin{figure}[htbp]
+  \centering
+  \IfFileExists{figures/arch_diagram.png}{%
+    \includegraphics[width=0.95\textwidth, keepaspectratio]%
+      {figures/arch_diagram.png}%
+  }{%
+    \fbox{%
+      \begin{minipage}{\dimexpr0.95\textwidth-2\fboxsep-2\fboxrule\relax}
+        \centering\vspace{2cm}
+        {\large\sffamily\color{clav-gray}
+          [Figure~1: System Architecture Diagram -- placeholder]\\[6pt]}
+        {\small\sffamily\color{clav-gray}
+          Export \texttt{arch\_diagram.png} from Mermaid
+          (source: \texttt{PLACE\_arch\_diagram\_HERE.txt})
+          and save to the \texttt{figures/} folder.}
+        \vspace{2cm}
+      \end{minipage}%
+    }%
+  }
+  \caption{BodyCheck three-tier deployment topology with VNPT API integration.
+    Arrows denote synchronous HTTPS calls between components; shaded
+    subgraphs are independently containerisable service tiers.
+    The AI Orchestration Tier calls VNPT SmartVoice, Smartbot, and
+    SmartReader in Round~2; post-competition builds may extend to
+    additional partner APIs.}
+  \label{fig:arch-diagram}
+\end{figure}
+
+\subsubsection*{Local Development and CI/CD Workflow}
+
+All three tiers run concurrently on a single developer laptop: Uvicorn on
+port~8016, Express on port~3000, and \texttt{flutter run -d chrome} pointing
+at the local gateway. A new contributor can clone the repository and have
+every service running in under 15~minutes.
+
+For the Round~2 submission, each service is containerised with a minimal
+\texttt{Dockerfile} and composed via \texttt{docker-compose.yml},
+satisfying the competition's one-command setup requirement for product
+completion. A lightweight GitHub Actions workflow runs automated smoke tests
+against the \texttt{/api/diagnose}, \texttt{/api/chat}, and
+\texttt{/api/clinics} endpoints before each push to the submission branch.
+
+% =============================================================================
+\subsection{Infrastructure and Operational Costs}
+\label{sec:feasibility-costs}
+\subsection{Infrastructure and Operational Costs}
+\label{sec:feasibility-costs}
+
+\subsubsection*{Round~2 --- Competition Phase}
+
+During Round~2 (26~June -- 3~July~2026), the organiser provides all VNPT API
+access at no cost to the team. Infrastructure expenditure is therefore
+limited to the compute instance required to run the three-tier service stack
+--- a university lab server or a minimal cloud VM (2~vCPU, 2~GB RAM) is
+sufficient for the prototype load expected during judging and live-demo
+sessions.
+
+\subsubsection*{Post-Competition Cost Model}
+
+After the competition, the team must transition to a commercial or partner
+API pricing arrangement. The total monthly operational expenditure scales
+linearly with session volume $R$:
+
+\begin{equation}
+  \label{eq:cost-model}
+  C_{\mathrm{ops}}(R) \;=\; C_{\mathrm{fixed}} \;+\;
+  \sum_{i=1}^{n} c_i\,\alpha_i\,R
+\end{equation}
+
+where $C_{\mathrm{fixed}}$ covers compute, networking, and storage;
+$c_i$ is the per-call unit price of VNPT service~$s_i$; and $\alpha_i$
+is the number of calls per session. Because the AI token budget per session
+is bounded by a fixed prompt template, this cost model is
+\emph{strictly linear} in $R$ with no quadratic blowup.
+
+The break-even monthly session volume $R^{*}$ under monetisation price $p$
+satisfies:
+
+\begin{equation}
+  \label{eq:break-even}
+  R^{*} \;=\; \frac{C_{\mathrm{fixed}}}
+               {p \;-\; \displaystyle\sum_{i=1}^{n} c_i\,\alpha_i}
+\end{equation}
+
+\noindent\textit{Note on specific figures:} Commercial per-call pricing
+for VNPT API tiers is not yet confirmed. Detailed cost estimates will
+be inserted once the team establishes a commercial arrangement with VNPT
+or an equivalent partner post-competition. The structural model above
+remains valid regardless of the specific coefficient values.
+
+% =============================================================================
+\subsection{Security and Legal Compliance}
+\label{sec:feasibility-security}
+% =============================================================================
+
+\subsubsection*{Data Protection Architecture}
+
+BodyCheck treats all symptom inputs as potentially sensitive health information,
+applying defence-in-depth controls at every tier:
+
+\begin{itemize}[leftmargin=2em, itemsep=3pt, topsep=4pt]
+  \item \textbf{Transport Security:}
+        All client-to-gateway and inter-service communication uses TLS~1.3.
+        Internal service calls within a private VPC stay off the public internet.
+  \item \textbf{Secrets Management:}
+        API credentials (VNPT keys, gateway tokens) are injected as
+        environment variables from a secrets vault (Docker Secrets or
+        equivalent) and never appear in source control. The repository
+        includes only a \texttt{.env.example} template listing required
+        variable names without exposing values.
+  \item \textbf{Input Validation:}
+        The Express gateway applies JSON Schema middleware before any payload
+        reaches the AI tier, blocking prompt-injection and malformed-input
+        vectors at the network boundary.
+  \item \textbf{No Persistent PHI:}
+        The FastAPI service holds session context only within the lifespan of
+        a single HTTP request. Structured logs record only anonymised metadata
+        (request ID, latency, model tag, HTTP status). No free-text symptom
+        content appears in log output.
+  \item \textbf{Rate Limiting:}
+        Per-IP rate limits and API-key quotas at the gateway prevent
+        runaway API quota consumption and abuse of the organiser-provided
+        VNPT allocation.
+\end{itemize}
+
+\subsubsection*{Open-Source Licensing and Medical Liability}
+
+The BodyCheck codebase is released under the MIT License, which explicitly
+disclaims all warranties and limits liability. Because the system produces
+health-adjacent guidance, additional framing is mandatory:
+
+\begin{itemize}[leftmargin=2em, itemsep=3pt, topsep=4pt]
+  \item A medical disclaimer is embedded in every AI response payload and
+        displayed prominently in the Flutter UI, clearly stating that
+        BodyCheck provides \emph{general informational support only} and is
+        not a substitute for professional medical advice.
+  \item Emergency escalation text (Vietnam emergency line: \textbf{115})
+        is injected by the prompt template whenever the AI detects a
+        high-severity symptom pattern.
+  \item Pre-launch clinical and legal review by a licensed medical
+        professional and by legal counsel specialising in Vietnamese
+        health-sector regulations is required before any public-facing
+        deployment beyond the competition context.
+\end{itemize}
+
+\subsubsection*{Regulatory Classification}
+
+Under current Vietnamese law, the relevant authorities are the Ministry of
+Information and Communications (MOIT) for digital platform registration
+and the Ministry of Health (MOH) for services classified as medical devices
+or telemedicine under Circular~30/2020/TT-BYT.
+
+At MVP stage, BodyCheck is a \emph{general health information tool}, not a
+telemedicine service or medical device, provided the non-diagnostic framing
+and mandatory disclaimer are consistently maintained. This keeps the
+competition-phase product outside medical device registration requirements.
+Future versions targeting structured diagnostic conclusions would require
+registration under Decree~98/2021/ND-CP and may require ISO~13485
+quality management certification.
+
+% =============================================================================
+\subsection{Post-Competition Roadmap and GTM Strategy}
+\label{sec:feasibility-gtm}
+
+BodyCheck's market scope is intentionally \emph{global from day one}: the
+entire product interface, AI prompt layer, and clinical-reference content
+operate in English, making it accessible to users in any country without
+a localisation bottleneck. Vietnam serves as the primary launch market given
+the team's local regulatory familiarity and existing network, with South-East
+Asia and broader English-speaking markets as the natural second wave.
+
+Beyond the primary consumer health use case, BodyCheck addresses a material
+problem in \textbf{education}: medical and nursing students, first-aid
+training programmes, and health-literacy curricula routinely struggle to
+teach anatomical symptom recognition interactively. The same 3D body-region
+interface and triage-reasoning engine that serves a self-diagnosing user
+also serves a student learning clinical decision pathways --- creating a
+dual-market opportunity from a single codebase. This educational channel
+aligns directly with HackAIthon topic~1 (AI solutions supporting
+Personalised Learning) in addition to the primary topic~4 (AI supporting
+Healthcare Operations).
+
+The post-competition roadmap is structured in three phases aligned with
+the rubric's 12-month market expansion requirement.
+
+\subsubsection*{Phase Definitions}
+
+\begin{description}[leftmargin=1em, style=nextline, itemsep=8pt, topsep=4pt]
+
+  \item[\textbf{Phase 1 --- HackAIthon Competition}]
+    \textit{June -- July 2026 (Rounds 1--3).}\\
+    Submit the Round~1 idea proposal. If selected for Round~2
+    (announcement before 26~June), integrate as many VNPT API services
+    as possible into the BodyCheck stack over the 8-day build window
+    (26~June -- 3~July) with direct Mentor support. Demonstrate a
+    live-running product at the Round~3 finals (14--15~July~2026 in
+    Hanoi). Collect structured judge and mentor feedback to anchor the
+    post-competition product direction.
+
+  \item[\textbf{Phase 2 --- Hardening and Closed Beta}]
+    \textit{August -- November 2026 (Months 1--4 post-competition).}\\
+    Begin serious post-competition development in August once semester
+    schedules allow. Stabilise and document all VNPT API integrations;
+    containerise all services with a one-command
+    \texttt{docker-compose} setup; implement TLS certificate
+    provisioning and vault-based secret injection.
+    In September--October, run a closed beta with 30--50 volunteer
+    testers drawn from HCMUS student and faculty networks and online
+    medical communities. Iterate on VNPT Smartbot prompt templates and
+    SmartReader parsing pipelines based on real-user feedback. Conduct
+    a first-pass clinical language and legal review.
+    Target: a stable, security-hardened beta release by end of
+    November~2026.
+
+  \item[\textbf{Phase 3 --- Public Launch and Market Expansion}]
+    \textit{December 2026 -- June 2027 (Months 5--12 post-competition).}\\
+    Add persistent session storage, user account management, and a UX
+    metrics observability stack (structured logging, distributed
+    tracing). Launch the consumer app (B2C) as a PWA and on mobile
+    stores with a freemium model in February~2027. In parallel,
+    onboard the first education-sector partners (medical schools, online
+    health-literacy platforms) under a white-label API licence in
+    March~2027, followed by the broader B2B2C healthcare channel
+    (telehealth operators, hospital intake portals) in April~2027.
+    Pursue institutional funding via accelerator programmes
+    (VNPT Innovation Hub, Google for Startups Vietnam, HCMUS
+    technology-transfer office) starting January~2027.
+    Initiate MOH regulatory consultation for the clinical-grade product
+    tier in April~2027.
+    Target: stable public launch \textbf{v1.0} by June~2027,
+    approximately 12~months post-competition.
+
+\end{description}
+
+\subsubsection*{Go-To-Market Channel Strategy}
+
+BodyCheck targets three complementary GTM channels:
+
+\begin{enumerate}[leftmargin=2em, itemsep=4pt, topsep=4pt]
+  \item \textbf{B2C --- Global Consumer Health App (English-first):}
+        A free-tier PWA and native mobile app distributed worldwide.
+        The English-first UI removes localisation barriers and makes
+        the product immediately accessible across South-East Asia,
+        South Asia, and other regions underserved by AI-powered
+        medical triage tools. Revenue via freemium subscription.
+  \item \textbf{B2B2C --- API Licensing to Healthcare Platforms:}
+        White-label REST API for telehealth operators, hospital patient
+        intake portals, and health insurance triage systems. Priced at
+        a per-call rate plus a monthly platform fee. Primary targets
+        are Vietnamese healthcare organisations; secondary targets are
+        international digital-health platforms that need a
+        multi-language AI triage layer.
+  \item \textbf{Education Channel --- Medical Training Platforms:}
+        The same 3D anatomical model and AI reasoning engine that
+        supports self-triage also serves medical and nursing students,
+        first-aid training programmes, and health-literacy curricula.
+        This channel is licensed to universities and online learning
+        platforms as a white-label simulation tool, at a flat
+        institutional annual fee rather than per-session billing.
+\end{enumerate}
+
+Figure~\ref{fig:gantt-roadmap} shows the full 12-month roadmap anchored
+to the competition milestone.
+
+% ---------------------------------------------------------------------------
+% Figure 2 -- Gantt Roadmap (Mermaid export)
+% ---------------------------------------------------------------------------
+\begin{figure}[htbp]
+  \centering
+  \IfFileExists{figures/gantt_roadmap.png}{%
+    \includegraphics[width=\textwidth, keepaspectratio]%
+      {figures/gantt_roadmap.png}%
+  }{%
+    \fbox{%
+      \begin{minipage}{\dimexpr\textwidth-2\fboxsep-2\fboxrule\relax}
+        \centering\vspace{2cm}
+        {\large\sffamily\color{clav-gray}
+          [Figure~2: 12-Month Post-Competition Roadmap -- placeholder]\\[6pt]}
+        {\small\sffamily\color{clav-gray}
+          Export \texttt{gantt\_roadmap.png} from Mermaid
+          (source: \texttt{PLACE\_gantt\_roadmap\_HERE.txt})
+          and save to the \texttt{figures/} folder.}
+        \vspace{2cm}
+      \end{minipage}%
+    }%
+  }
+  \caption{BodyCheck 12-month development and GTM roadmap anchored at the
+    HackAIthon 2026 finals (July 2026). Phase~1 covers the competition
+    period; Phases~2 and~3 represent the post-competition commercialisation
+    trajectory. Completed tasks appear in green; planned tasks in blue;
+    diamonds mark major milestones.}
+  \label{fig:gantt-roadmap}
+\end{figure}
+
+% ---------------------------------------------------------------------------
+% Table 2 -- Risk Matrix
+% ---------------------------------------------------------------------------
+\begin{table}[htbp]
+  \centering
+  \caption{Principal risks and mitigation strategies for the post-competition
+    product roadmap.}
+  \label{tab:risk-matrix}
+  \setlength{\tabcolsep}{6pt}
+  \renewcommand{\arraystretch}{1.4}
+  \small
+  \begin{tabular}{@{} p{3.1cm} p{2.1cm} p{7.0cm} @{}}
+    \toprule
+    \textbf{Risk} & \textbf{Severity} & \textbf{Mitigation Strategy} \\
+    \midrule
+
+    VNPT commercial API pricing &
+    \textcolor{clav-amber}{\textbf{Medium}} &
+    Provider-agnostic routing layer in FastAPI allows hot-swapping to
+    alternative AI backends (e.g., open-source LLM hosts, Gemini API)
+    without touching application code above the service boundary. \\[4pt]
+
+    Regulatory reclassification &
+    \textcolor{clav-amber}{\textbf{Medium}} &
+    Phase~3 launch targets the non-regulated consumer information category.
+    Clinical-grade features are deferred behind a separate product tier
+    pending MOH review. The mandatory disclaimer ensures compliance
+    throughout. \\[4pt]
+
+    Team continuity &
+    \textcolor{clav-amber}{\textbf{Medium}} &
+    Infrastructure-as-Code, clean API boundaries between tiers, and
+    comprehensive technical documentation lower the barrier for new
+    contributors and reduce single-point-of-failure risk. \\[4pt]
+
+    User trust in AI medical tools &
+    \textcolor{clav-amber}{\textbf{Medium}} &
+    Transparent uncertainty communication, mandatory disclaimer, and
+    triage-support framing (not diagnosis) are embedded in the prompt
+    template and UI copy at every touchpoint. \\
+
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% =============================================================================
+% End of Section: Feasibility Assessment
+% =============================================================================

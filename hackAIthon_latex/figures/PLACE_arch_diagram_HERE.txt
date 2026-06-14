@@ -1,0 +1,59 @@
+%%{ init: { "theme": "base", "themeVariables": {
+    "primaryColor":        "#E8F0FE",
+    "primaryBorderColor":  "#1A73E8",
+    "primaryTextColor":    "#202124",
+    "lineColor":           "#5F6368",
+    "secondaryColor":      "#E6F4EA",
+    "tertiaryColor":       "#FEF7E0",
+    "fontFamily":          "Segoe UI, Arial, sans-serif",
+    "fontSize":            "13px"
+} } }%%
+flowchart TD
+    %% ── Client Tier ──────────────────────────────────────────────────────
+    subgraph CLIENT ["🖥️  Client Tier"]
+        ThreeJS["Three.js 3D Body Model (iframe)"]
+        Flutter["Flutter Web / Mobile Client"]
+        ThreeJS --> Flutter
+    end
+
+    %% ── Gateway Tier ─────────────────────────────────────────────────────
+    subgraph GATEWAY ["⚙️  Gateway Tier"]
+        Express["Express API Gateway (Node.js 20 LTS)"]
+        Validator["JSON Schema Validator Middleware"]
+        Express --> Validator
+    end
+
+    %% ── AI Orchestration Tier ────────────────────────────────────────────
+    subgraph AI ["🤖  AI Orchestration Tier"]
+        FastAPI["FastAPI AI Microservice (Python 3.12)"]
+        Router{"Language Router"}
+        Claude["OpenRouter Claude 3.5 Sonnet"]
+        Qwen["OpenRouter Qwen-2.5-72B"]
+        
+        FastAPI --> Router
+        Router --> |"English"| Claude
+        Router --> |"Vietnamese"| Qwen
+    end
+
+    %% ── External Services ────────────────────────────────────────────────
+    %% Placed structurally inside a clean vertical pipeline
+    subgraph EXT ["☁️  External APIs"]
+        direction LR
+        Exa["Exa.ai Medical Search"]
+        Foursquare["Foursquare Places API"]
+        OpenAI["OpenAI GPT-4.1 Formatter"]
+    end
+
+    %% ── Cross-Tier Hierarchical Connections ──────────────────────────────
+    Flutter --> |"POST /api/ai/diagnose (HTTPS)"| Express
+    Validator --> |"Proxy request (internal)"| FastAPI
+    
+    %% Forcing External APIs to sit cleanly under FastAPI structurally
+    FastAPI --> EXT
+
+    %% ── Styling ──────────────────────────────────────────────────────────
+    style CLIENT   fill:#E8F0FE,stroke:#1A73E8,stroke-width:2px
+    style GATEWAY  fill:#E6F4EA,stroke:#0D9276,stroke-width:2px
+    style AI       fill:#FEF7E0,stroke:#F4A21B,stroke-width:2px
+    style EXT      fill:#FCE8E6,stroke:#D93025,stroke-width:2px
+    style Router   fill:#FFFFFF,stroke:#5F6368,stroke-dasharray: 4 4

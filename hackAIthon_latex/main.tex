@@ -1,0 +1,128 @@
+% =============================================================================
+%  main.tex — BodyCheck Hackathon Proposal Document
+%  LotusHacks 2026 | Team Clavicular
+%
+%  Compile with:  pdflatex main.tex  (run twice for cross-references)
+%  Or:            latexmk -pdf main.tex
+% =============================================================================
+
+\documentclass[11pt, a4paper]{article}
+
+% ---- Core encoding ----------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+
+% ---- Page geometry ----------------------------------------------------------
+\usepackage[
+  top=2.5cm, bottom=2.5cm,
+  left=2.8cm, right=2.8cm
+]{geometry}
+
+% ---- Typography & fonts -----------------------------------------------------
+\usepackage{microtype}
+\usepackage{setspace}
+\setstretch{1.10}
+\hbadness=10000   % suppress underfull hbox warnings from p-column tables
+
+
+% ---- Math -------------------------------------------------------------------
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% ---- Tables -----------------------------------------------------------------
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{colortbl}
+
+% ---- Color (must come before titlesec and hyperref) -------------------------
+\usepackage[dvipsnames, svgnames, table]{xcolor}
+
+% --- Project colour palette (defined here so all packages can use them) ------
+\definecolor{clav-blue}{HTML}{1A73E8}
+\definecolor{clav-green}{HTML}{0D9276}
+\definecolor{clav-amber}{HTML}{F4A21B}
+\definecolor{clav-red}{HTML}{D93025}
+\definecolor{clav-gray}{HTML}{5F6368}
+\definecolor{clav-light}{HTML}{F8F9FA}
+\definecolor{clav-dark}{HTML}{202124}
+\definecolor{gantt-bar}{HTML}{4285F4}
+\definecolor{gantt-done}{HTML}{34A853}
+\definecolor{gantt-risk}{HTML}{EA4335}
+
+% ---- Graphics / TikZ --------------------------------------------------------
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{
+  shapes.geometric,
+  arrows.meta,
+  positioning,
+  fit,
+  backgrounds,
+  shadows.blur
+}
+
+% ---- Gantt chart ------------------------------------------------------------
+\usepackage{pgfgantt}
+
+% ---- Captions ---------------------------------------------------------------
+\usepackage{caption}
+\captionsetup{
+  font=small,
+  labelfont=bf,
+  skip=6pt
+}
+
+% ---- Lists ------------------------------------------------------------------
+\usepackage{enumitem}
+
+% ---- Section heading style (uses colours defined above) ---------------------
+\usepackage{titlesec}
+\titleformat{\section}[block]
+  {\large\bfseries\sffamily\color{clav-dark}}
+  {\thesection}{0.8em}{}
+  [\vspace{-4pt}\textcolor{clav-blue}{\rule{\linewidth}{1.2pt}}]
+
+\titleformat{\subsection}[block]
+  {\normalsize\bfseries\sffamily\color{clav-dark}}
+  {\thesubsection}{0.6em}{}
+
+% ---- Hyperlinks (load LAST among packages) ----------------------------------
+\usepackage[
+  colorlinks = true,
+  linkcolor  = clav-blue,
+  citecolor  = clav-green,
+  urlcolor   = clav-blue,
+  bookmarks  = true,
+  pdfusetitle
+]{hyperref}
+\hypersetup{
+  pdftitle   = {BodyCheck --- Project Feasibility Assessment},
+  pdfauthor  = {Team Clavicular, HCMUS},
+  pdfsubject = {LotusHacks 2026 Hackathon Proposal}
+}
+
+% ---- Figure search paths ---------------------------------------------------
+\graphicspath{{figures/}}
+
+% =============================================================================
+\begin{document}
+
+% ---- Title block ------------------------------------------------------------
+\begin{center}
+  {\LARGE\bfseries\sffamily BodyCheck}\\[4pt]
+  {\large AI-Powered Medical Triage \& 3D Symptom Checker}\\[6pt]
+  {\normalsize Team Clavicular $\cdot$ HCMUS APCS/CLC
+               $\cdot$ LotusHacks 2026}\\[2pt]
+  {\small\textcolor{clav-gray}{\today}}
+\end{center}
+\vspace{8pt}
+{\color{clav-blue}\hrule height 0.8pt}
+\vspace{14pt}
+
+% ---- Main content -----------------------------------------------------------
+\input{feasibility}
+
+% =============================================================================
+\end{document}

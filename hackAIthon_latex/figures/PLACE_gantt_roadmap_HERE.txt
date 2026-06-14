@@ -1,0 +1,41 @@
+%%{ init: { "theme": "base", "gantt": { "leftPadding": 230 }, "themeVariables": {
+    "primaryColor":       "#4285F4",
+    "primaryBorderColor": "#1A73E8",
+    "primaryTextColor":   "#202124",
+    "fontFamily":         "Segoe UI, Arial, sans-serif",
+    "fontSize":           "14px"
+} } }%%
+gantt
+    title  BodyCheck — Development & 12-Month Post-Competition Roadmap
+    dateFormat  YYYY-MM
+    axisFormat  %b'%y
+    tickInterval 1month
+
+    section Foundation (Done)
+    3D body model & region mapping      :done, p1a, 2026-01, 2M
+    Express gateway + FastAPI service   :done, p1b, 2026-01, 2M
+    Flutter client (web / mobile)       :done, p1c, 2026-02, 1M
+    First MVP demo — 72-h sprint        :milestone, m0, 2026-02-28, 0M
+
+    section HackAIthon 2026
+    Round 1 — Idea proposal             :active, c1, 2026-06, 1M
+    Round 2 — VNPT API integration      :        c2, 2026-07, 1M
+    Round 3 — Finals (Hanoi)            :milestone, m1, 2026-07-15, 0M
+
+    section Phase 2 · Hardening & Closed Beta
+    VNPT API stabilisation & tests      :        p2a, 2026-08, 2M
+    Dockerisation & CI/CD pipeline      :        p2b, 2026-08, 2M
+    Security hardening (TLS, vault)     :        p2c, 2026-09, 2M
+    Closed beta — 30-50 testers         :        p2d, 2026-10, 2M
+    Clinical & legal review v1          :        p2e, 2026-10, 2M
+    Beta Release                        :milestone, m2, 2026-11-30, 0M
+
+    section Phase 3 · Launch & Scale
+    Persistent storage & user accounts  :        p3a, 2026-12, 2M
+    Observability & monitoring stack    :        p3b, 2026-12, 2M
+    B2C freemium app (PWA + stores)     :        p3c, 2027-02, 3M
+    Education platform integration      :        p3d, 2027-03, 3M
+    B2B2C API licensing (healthcare)    :        p3e, 2027-04, 3M
+    Accelerator / funding pursuit       :        p3f, 2027-01, 6M
+    MOH regulatory consultation         :        p3g, 2027-04, 3M
+    Public Launch v1.0                  :milestone, m3, 2027-06-30, 0M
