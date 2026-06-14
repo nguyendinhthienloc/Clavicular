@@ -1,0 +1,320 @@
+% =============================================================================
+%  problem_fit.tex -- Section: Problem Fit, User Pain Points, and AI Rationale
+%  BodyCheck -- AI-Powered Medical Triage & 3D Symptom Checker
+%  Team Clavicular | LotusHacks 2026
+%
+%  Pure content module -- include via \input{problem_fit}.
+%  Uses only packages already loaded in main.tex.
+% =============================================================================
+
+\section{Problem Fit, User Pain Points, and AI Rationale}
+\label{sec:problem-fit}
+
+This section addresses the rubric criterion on \textit{tinh phu hop de bai}
+--- alignment with the problem statement, evidence-based analysis of end-user
+pain points, and a clear explanation of why artificial intelligence is the
+appropriate technical approach. BodyCheck directly targets early medical
+triage: users localise pain on an interactive body model, provide symptoms
+through text or voice, receive uncertainty-aware first-pass guidance, and are
+directed toward appropriate next steps or nearby healthcare facilities.
+
+The core problem is not simply that users lack medical information. The more
+specific problem is that non-specialist users often face a gap between symptom
+onset and professional care. During that gap, they must decide whether a symptom
+is manageable at home, requires a routine appointment, or may require urgent
+care. Current alternatives --- search engines, social media, static symptom
+checklists, and manual triage calls --- are either unreliable, too slow, too
+expensive, or too dependent on clinical expertise. BodyCheck is therefore
+designed as a triage-support tool, not as a final diagnostic authority.
+
+% ---------------------------------------------------------------------------
+% Table 1 -- User Pain-Point Evidence
+% ---------------------------------------------------------------------------
+\begin{table}[htbp]
+  \centering
+  \caption{End-user pain points, supporting evidence, and BodyCheck response.}
+  \label{tab:problem-fit-pain-points}
+  \setlength{\tabcolsep}{5pt}
+  \renewcommand{\arraystretch}{1.45}
+  \small
+  \begin{tabular}{@{} p{2.9cm} p{4.2cm} p{4.2cm} p{2.2cm} @{}}
+    \toprule
+    \textbf{Pain Point} &
+    \textbf{Observed Evidence} &
+    \textbf{BodyCheck Response} &
+    \textbf{Fit} \\
+    \midrule
+
+    Uneven access to timely care &
+    Vietnam remains a mixed urban--rural healthcare market: DataReportal
+    reports that 59.5\% of Vietnam's population lived in rural areas in
+    early 2025.\footnotemark[1] &
+    Provides immediate first-pass triage through a web/mobile interface,
+    reducing the need for a user to wait until clinic access is available
+    before understanding the likely urgency of their symptoms. &
+    \textcolor{clav-green}{\textbf{High}} \\
+
+    Slow early triage &
+    Vietnam had 12.5 doctors per 10{,}000 people in 2023, according to a
+    Ministry-of-Health-reported figure cited by VietnamNet.\footnotemark[2]
+    This indicates that clinician time remains a scarce resource relative
+    to population-scale triage demand. &
+    Automates the first structured intake step: body region, symptom text,
+    follow-up questions, risk level, and suggested next action. Clinicians
+    can receive a cleaner summary instead of raw, unstructured complaints. &
+    \textcolor{clav-green}{\textbf{High}} \\
+
+    Risky self-diagnosis behaviour &
+    Pew Research Center found that 35\% of U.S. adults had gone online to
+    identify a possible medical condition, while 18\% of online diagnosers
+    later received a different or non-matching opinion from a clinician.
+    \footnotemark[3] &
+    Replaces ad-hoc searching with a constrained triage workflow:
+    uncertainty wording, safety disclaimers, red-flag escalation, and
+    references rather than unsupported diagnostic certainty. &
+    \textcolor{clav-green}{\textbf{High}} \\
+
+    Low-friction digital expectation &
+    Vietnam had 79.8 million internet users in January 2025, equal to
+    78.8\% internet penetration.\footnotemark[1] This supports a
+    mobile/web-first access model for consumer health guidance. &
+    Uses Flutter/web delivery, body-map interaction, text or voice symptom
+    input, and short response formats so non-specialist users do not need
+    medical vocabulary to begin the triage flow. &
+    \textcolor{clav-green}{\textbf{High}} \\
+
+    Need for understandable next steps &
+    The pitch-deck user flow requires users to move from body-map selection
+    to symptoms, AI reasoning, possible conditions, recommended actions,
+    references, and nearby clinics. &
+    BodyCheck maps the full decision path: ``What hurts?'', ``What symptoms
+    accompany it?'', ``How urgent is this?'', ``What should I do next?'',
+    and ``Where can I seek care?'' &
+    \textcolor{clav-green}{\textbf{High}} \\
+
+    \bottomrule
+  \end{tabular}
+
+  \smallskip\noindent
+  {\footnotesize
+  \footnotemark[1]\href{https://datareportal.com/reports/digital-2025-vietnam}
+  {DataReportal, \textit{Digital 2025: Vietnam}.}
+  \quad
+  \footnotemark[2]\href{https://vietnamnet.vn/en/vn-targets-15-doctors-per-10-000-people-by-2025-2254601.html}
+  {VietnamNet, citing Ministry of Health figures, 2024.}
+  \quad
+  \footnotemark[3]\href{https://www.pewresearch.org/internet/2013/01/15/health-online-2013/}
+  {Pew Research Center, \textit{Health Online 2013}.}
+  }
+\end{table}
+
+% =============================================================================
+\subsection{Alignment with the Project Requirement}
+\label{sec:problem-fit-alignment}
+% =============================================================================
+
+BodyCheck is aligned with the problem requirement because it focuses on a
+concrete, high-frequency user decision: how to respond when pain or discomfort
+appears but professional medical help is not immediately available. The product
+does not attempt to replace a physician. Instead, it supports the earlier and
+safer step of triage: collecting symptoms, identifying urgency signals, giving
+plain-language guidance, and encouraging escalation when needed.
+
+The attached project outline defines the product around three linked actions:
+localising pain through a 3D body model, generating clinician-style preliminary
+guidance, and connecting users with relevant healthcare facilities. This is a
+direct match for users who cannot easily convert a vague sensation such as
+``chest tightness'', ``shoulder pain'', or ``abdominal discomfort'' into a clear
+care pathway. The body-map interaction reduces ambiguity at input time, while
+the AI layer transforms the user's natural-language description into a
+structured response.
+
+The pitch flow further reinforces the fit: users tap the body map, add symptoms
+through text or voice, receive AI reasoning and risk scoring, read conditions
+and recommended actions, and then find nearby treatment options. This is not an
+abstract AI feature layered onto a healthcare product; it is the central
+mechanism that converts unstructured symptoms into actionable triage guidance.
+
+% =============================================================================
+\subsection{Why AI Is Necessary}
+\label{sec:problem-fit-why-ai}
+% =============================================================================
+
+AI is necessary because the input problem is inherently unstructured. Users do
+not describe symptoms in standard medical terminology. They may mix location,
+duration, severity, lifestyle context, medication history, and emotional concern
+in one short message. A static rule tree can handle only a limited set of
+predefined cases, while a search engine returns documents that the user still
+has to interpret. BodyCheck requires an intermediate reasoning layer that can
+parse free text, ask follow-up questions, communicate uncertainty, and produce
+a structured output that is understandable to both users and downstream systems.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Why the BodyCheck use case requires AI rather than a purely static workflow.}
+  \label{tab:why-ai}
+  \setlength{\tabcolsep}{5pt}
+  \renewcommand{\arraystretch}{1.45}
+  \small
+  \begin{tabular}{@{} p{3.0cm} p{4.0cm} p{4.4cm} p{2.0cm} @{}}
+    \toprule
+    \textbf{Required Capability} &
+    \textbf{Non-AI Limitation} &
+    \textbf{AI Contribution} &
+    \textbf{Safety Control} \\
+    \midrule
+
+    Natural symptom understanding &
+    Users write vague or incomplete descriptions that do not match exact
+    checklist labels. &
+    Extracts body region, symptom type, duration, severity, and contextual
+    clues from free text. &
+    Structured prompt template and validated response schema. \\
+
+    Follow-up questioning &
+    Static forms either ask too many questions or miss case-specific details. &
+    Generates targeted follow-up questions based on the selected body region
+    and symptoms already provided. &
+    Maximum question count and red-flag escalation rules. \\
+
+    Urgency guidance &
+    Search results do not reliably distinguish home care, routine care, and
+    urgent care. &
+    Produces a triage-style risk level with recommended next steps and
+    uncertainty-aware explanation. &
+    Mandatory disclaimer and emergency escalation language. \\
+
+    Evidence summarisation &
+    Users cannot quickly compare long medical references during a stressful
+    moment. &
+    Retrieves, ranks, and summarises relevant sources in plain language. &
+    Source links are preserved; definitive diagnosis is prohibited. \\
+
+    Multilingual and accessible output &
+    Text-heavy interfaces exclude users who prefer voice or simpler language. &
+    Supports voice input/output and can adapt response phrasing for English
+    and Vietnamese users. &
+    Medical meaning is constrained by response format and clinical disclaimer. \\
+
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The strongest reason for using AI is therefore not novelty. The strongest reason
+is task fit. BodyCheck must mediate between messy human symptom descriptions and
+structured triage outputs. AI is appropriate because it can handle linguistic
+variation, maintain conversational context, summarise evidence, and produce
+consistent first-pass guidance. At the same time, the system deliberately
+limits the role of AI: it does not issue final diagnoses, does not replace
+clinical judgement, and must escalate high-risk symptoms to professional or
+emergency care.
+
+% =============================================================================
+\subsection{End-User Value Proposition}
+\label{sec:problem-fit-value}
+% =============================================================================
+
+For health-conscious consumers, BodyCheck reduces confusion during the first
+minutes after symptom onset. Instead of searching many unrelated pages, the user
+can identify a body region, describe symptoms naturally, and receive a concise
+summary of possible explanations and next steps. This is especially useful for
+users who do not know medical vocabulary or who need guidance outside clinic
+hours.
+
+For clinical triage operators and telehealth nurses, BodyCheck reduces the
+amount of unstructured intake work. The system can prepare a cleaner symptom
+summary, identify missing information, and highlight possible red flags before
+human review. The value is not replacing the operator; the value is making the
+first-pass intake faster and more consistent.
+
+For primary-care clinicians, BodyCheck can act as a pre-consultation summary
+tool. A patient-facing intake flow that captures body region, symptoms,
+duration, severity, and AI-generated references can reduce the time spent
+clarifying basic symptom history during the appointment.
+
+% ---------------------------------------------------------------------------
+% Table 3 -- Requirement Coverage Matrix
+% ---------------------------------------------------------------------------
+\begin{table}[htbp]
+  \centering
+  \caption{Coverage of the 25-point ``problem fit'' requirement.}
+  \label{tab:problem-fit-coverage}
+  \setlength{\tabcolsep}{6pt}
+  \renewcommand{\arraystretch}{1.4}
+  \small
+  \begin{tabular}{@{} p{4.0cm} p{7.2cm} p{2.0cm} @{}}
+    \toprule
+    \textbf{Rubric Requirement} &
+    \textbf{How This Section Addresses It} &
+    \textbf{Status} \\
+    \midrule
+
+    Closely follows the problem statement &
+    Focuses on early medical triage, pain localisation, symptom intake,
+    urgency guidance, references, and clinic handoff. &
+    \textcolor{clav-green}{\textbf{Covered}} \\
+
+    Analyses customer/end-user pain points &
+    Identifies uneven access, slow triage, risky self-diagnosis,
+    low-friction digital expectations, and need for understandable next steps. &
+    \textcolor{clav-green}{\textbf{Covered}} \\
+
+    Uses real data &
+    Uses external public statistics on Vietnam digital readiness,
+    rural population share, doctor density, and online self-diagnosis behaviour. &
+    \textcolor{clav-amber}{\textbf{Partial}} \\
+
+    Clearly explains ``why AI'' &
+    Shows that free-text symptom understanding, follow-up questioning,
+    urgency classification, evidence summarisation, and voice accessibility
+    require AI-supported reasoning rather than a static checklist alone. &
+    \textcolor{clav-green}{\textbf{Covered}} \\
+
+    Maintains medical safety framing &
+    States that BodyCheck supports triage only, avoids final diagnosis,
+    communicates uncertainty, and escalates red-flag cases. &
+    \textcolor{clav-green}{\textbf{Covered}} \\
+
+    \bottomrule
+  \end{tabular}
+
+  \smallskip\noindent
+  {\footnotesize
+  The ``real data'' criterion is marked as partial because the current
+  project files do not include primary user-research data from the team.
+  To make this criterion fully defensible, the team should add its own
+  survey, interview, or prototype-testing results before final submission.
+  }
+\end{table}
+
+% =============================================================================
+\subsection{Additional Primary Data Needed Before Submission}
+\label{sec:problem-fit-data-needed}
+% =============================================================================
+
+The current section is strong enough as a public-data-backed argument, but the
+rubric specifically rewards analysis of customer or end-user pain points. For
+maximum score, the team should add at least one primary-data block from its own
+validation work. The most useful additions are:
+
+\begin{itemize}[leftmargin=2em, itemsep=3pt, topsep=4pt]
+  \item \textbf{User survey:} number of respondents, percentage who have
+        searched symptoms online, percentage who felt uncertain about urgency,
+        and percentage who would use a body-map triage assistant.
+  \item \textbf{Prototype test:} number of testers, average time to complete
+        symptom input, task-completion rate, and qualitative comments on the
+        body-map interaction.
+  \item \textbf{Interview evidence:} three to five short pain-point findings
+        from students, parents, rural users, telehealth users, or healthcare
+        support staff.
+  \item \textbf{Before--after comparison:} time required to search symptoms
+        manually versus time required to complete the BodyCheck flow.
+\end{itemize}
+
+Once those numbers are available, Table~\ref{tab:problem-fit-pain-points} should
+be updated so at least one row cites team-collected data rather than only
+public secondary sources.
+
+% =============================================================================
+% End of Section: Problem Fit, User Pain Points, and AI Rationale
+% =============================================================================
