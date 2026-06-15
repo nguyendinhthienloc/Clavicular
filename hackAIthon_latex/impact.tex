@@ -1,0 +1,314 @@
+% =============================================================================
+%  impact.tex -- Section: Projected Impact Assessment
+%  BodyCheck -- AI-Powered Medical Triage & 3D Symptom Checker
+%  Vietnamese Student HackAIthon 2026 -- Bang B (Challenger)
+%  Team Clavicular | HCMUS APCS/CLC
+%
+%  Pure content module -- include via \input{impact}.
+%  Uses only packages and colour definitions already loaded in main.tex.
+% =============================================================================
+
+\section{Projected Impact Assessment}
+\label{sec:impact}
+
+This section addresses the fourth Round~1 evaluation criterion ---
+Projected Impact. We evaluate BodyCheck along four dimensions required by
+the rubric: social and business value; potential user scale using a
+TAM--SAM--SOM framing; competitive advantage in the target market; and the
+revenue/value model that can sustain the product after the competition.
+
+The impact thesis is straightforward: BodyCheck does not try to replace
+doctors. Its highest-value contribution is to improve the earliest minutes of
+a health concern, when users are uncertain, anxious, and often forced to choose
+between ignoring symptoms, searching online, or visiting a clinic without a
+clear sense of urgency. By turning vague symptoms into structured triage
+guidance, BodyCheck can reduce confusion for users, prepare cleaner intake
+summaries for healthcare teams, and create a reusable learning environment for
+health-literacy and medical-training use cases.
+
+Table~\ref{tab:impact_matrix} summarises the expected impact channels.
+
+% ---------------------------------------------------------------------------
+% Table 1 -- Projected Impact Matrix
+% ---------------------------------------------------------------------------
+\begin{table}[htbp]
+  \centering
+  \caption{Projected impact channels for BodyCheck aligned to the
+    HackAIthon 2026 Round~1 impact rubric.}
+  \label{tab:impact_matrix}
+  \setlength{\tabcolsep}{5pt}
+  \renewcommand{\arraystretch}{1.45}
+  \small
+  \begin{tabular}{@{} p{3.0cm} p{4.6cm} p{4.7cm} @{}}
+    \toprule
+    \textbf{Impact Area} &
+    \textbf{Expected Benefit} &
+    \textbf{Measurement Signal} \\
+    \midrule
+
+    Social Benefit &
+    Earlier recognition of red flags, clearer self-care guidance, and
+    faster escalation to professional care when symptoms appear risky. &
+    Time-to-first-guidance, emergency-escalation rate, user clarity score,
+    and clinic handoff clicks. \\
+
+    Healthcare Operations &
+    Cleaner pre-consultation summaries reduce repetitive intake work for
+    triage operators, telehealth nurses, and primary-care clinics. &
+    Intake completion rate, summary reuse rate, average number of follow-up
+    clarification questions. \\
+
+    Education &
+    Interactive 3D body-region selection and AI-generated triage cases create
+    a simulation tool for medical, nursing, first-aid, and health-literacy
+    programmes. &
+    Number of institutional pilots, completed learning cases, instructor
+    feedback score. \\
+
+    Business Value &
+    One shared technical core supports three commercial channels: consumer
+    app, healthcare API, and education licence. &
+    Monthly active users, API request volume, institutional pilots, paid
+    conversion rate. \\
+
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% =============================================================================
+\subsection{Social and Healthcare Impact}
+\label{sec:impact-social}
+% =============================================================================
+
+BodyCheck creates value by reducing the gap between symptom onset and an
+appropriate next action. For non-specialist users, the product translates a
+stressful and ambiguous experience --- for example, ``chest tightness'',
+``shoulder pain'', or ``lower abdominal discomfort'' --- into a structured
+triage response:
+
+\begin{itemize}[leftmargin=2em, itemsep=3pt, topsep=4pt]
+  \item possible explanations expressed with uncertainty language;
+  \item risk level and recommended timing for care;
+  \item red-flag symptoms that require urgent escalation;
+  \item home-care tips for low-risk situations;
+  \item trusted references and nearby care options when professional help is
+        appropriate.
+\end{itemize}
+
+This matters because the first decision is often the most confusing one:
+whether to wait, self-care, schedule a routine appointment, or seek urgent
+care. BodyCheck improves that decision without making a final diagnosis. The
+AI response is deliberately constrained by prompt rules, a structured schema,
+and a medical disclaimer so that the user receives triage support rather than
+false diagnostic certainty.
+
+For healthcare operations, the impact is not only patient-facing. A structured
+intake flow can produce cleaner summaries for telehealth nurses, clinic
+reception teams, and primary-care doctors. Instead of receiving a long
+unstructured complaint, the clinician can see the affected region, duration,
+severity, possible red flags, AI-generated follow-up questions, and the user's
+own symptom notes. This can reduce repeated clarification work and make the
+first human consultation more focused.
+
+For education, the same workflow becomes a learning tool. Students can explore
+anatomical regions on a 3D model, compare symptoms across body systems, and
+observe how different risk factors change the recommended triage pathway. This
+creates a second impact channel beyond consumer health: interactive clinical
+reasoning practice for medical and nursing students, first-aid training
+programmes, and public health-literacy courses.
+
+% =============================================================================
+\subsection{Market Potential and TAM--SAM--SOM Framing}
+\label{sec:impact-market}
+% =============================================================================
+
+At Round~1 stage, exact commercial market sizing is less reliable than a
+transparent bottom-up model. BodyCheck therefore uses a conservative
+TAM--SAM--SOM framing based on reachable digital users, expected symptom-help
+seeking behaviour, and the team's realistic first-year distribution channels.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Conservative TAM--SAM--SOM framing for BodyCheck. Values are
+    planning estimates for product direction, not claimed realised traction.}
+  \label{tab:tam_sam_som}
+  \setlength{\tabcolsep}{5pt}
+  \renewcommand{\arraystretch}{1.45}
+  \small
+  \begin{tabular}{@{} p{2.0cm} p{5.2cm} p{5.1cm} @{}}
+    \toprule
+    \textbf{Layer} & \textbf{Definition} & \textbf{BodyCheck Estimate} \\
+    \midrule
+
+    TAM &
+    Digitally reachable users who may need symptom guidance, health
+    information, or basic triage support. &
+    Domestic floor: Vietnam's internet-user base already identified in
+    \S\ref{sec:problem-fit}. Global upside comes from the English-first
+    interface and web/PWA distribution. \\
+
+    SAM &
+    Users and organisations reachable by the initial product scope: English
+    and Vietnamese web/mobile users, telehealth intake teams, clinics, and
+    education providers. &
+    Initial serviceable segment: students, young families, health-conscious
+    consumers, HCMUS/HCMC beta networks, online first-aid communities, and
+    small healthcare/education partners. \\
+
+    SOM &
+    Share realistically obtainable in the first 12 months after the
+    competition, assuming a student-led team and low marketing budget. &
+    Target: 30--50 closed-beta testers, 10{,}000--30{,}000 first-year
+    consumer users, 2--3 education pilots, and 1--2 healthcare workflow
+    pilots by June~2027. \\
+
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The strongest initial market is not the full healthcare system. It is the
+pre-clinical decision layer: people who feel symptoms and need immediate,
+understandable next-step guidance before they reach a professional. This layer
+is large because it sits upstream of clinics, hospitals, telehealth platforms,
+and search engines. BodyCheck's web-first architecture lets the team test this
+market with a low-friction PWA before investing in heavier clinical
+integrations.
+
+The education segment provides an additional serviceable market with lower
+regulatory friction. A 3D anatomical symptom checker can be packaged as a
+simulation environment for instructors, allowing students to practise
+triage-style reasoning without involving real patient data. This makes the
+product useful even before it becomes a clinically reviewed public health tool.
+
+% =============================================================================
+\subsection{Competitive Advantage}
+\label{sec:impact-competitive}
+% =============================================================================
+
+BodyCheck's competitive advantage comes from combining several capabilities
+that usually appear separately in existing tools. Search engines provide
+information but no structured triage path. Static symptom checkers provide
+forms but often feel rigid and text-heavy. Generic chatbots can converse, but
+they do not know where the user is pointing on the body and are not designed
+around care-navigation handoff. Telehealth platforms connect users to
+clinicians, but they often begin after the user has already decided to seek
+care.
+
+BodyCheck differs by making the body region the first-class input. The user can
+click or paint affected areas on an interactive 3D anatomical model before
+writing symptoms. This reduces ambiguity for non-specialist users and creates a
+more structured clinical context for the AI layer. The resulting response is
+not just a chat answer; it is a triage packet containing body region, symptom
+summary, risk level, possible conditions, warning signs, references, and nearby
+care options.
+
+\begin{table}[htbp]
+  \centering
+  \caption{BodyCheck differentiation against common alternatives.}
+  \label{tab:competitive_comparison}
+  \setlength{\tabcolsep}{5pt}
+  \renewcommand{\arraystretch}{1.45}
+  \small
+  \begin{tabular}{@{} p{3.2cm} p{4.8cm} p{4.8cm} @{}}
+    \toprule
+    \textbf{Alternative} & \textbf{Limitation} & \textbf{BodyCheck Difference} \\
+    \midrule
+
+    Search Engines &
+    Return many documents; users must interpret urgency themselves. &
+    Produces a constrained triage summary with next-step timing and red-flag
+    escalation. \\
+
+    Static Symptom Checkers &
+    Depend on rigid forms and predefined symptom trees. &
+    Supports natural language, voice input, and targeted follow-up questions. \\
+
+    Generic AI Chatbots &
+    Lack anatomical context, care-routing workflow, and product-level safety
+    framing. &
+    Combines 3D body-region input, structured diagnosis schema, references,
+    disclaimer, and clinic handoff. \\
+
+    Telehealth Intake Forms &
+    Often start after the user has already chosen to seek care. &
+    Supports the earlier decision layer and can still export structured
+    summaries into telehealth workflows. \\
+
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+This combination creates more than a cosmetic difference. The core workflow is
+at least 30\% different from conventional text-only symptom tools because the
+product changes the input modality, response structure, and downstream action
+path. It begins with spatial symptom localisation, adds LLM-based reasoning,
+preserves safety constraints, and ends with either self-care guidance,
+professional escalation, or a clinic/education handoff.
+
+% =============================================================================
+\subsection{Revenue and Value Model}
+\label{sec:impact-revenue}
+% =============================================================================
+
+BodyCheck's revenue model is designed around three complementary channels so
+that the product is not dependent on a single customer type.
+
+\begin{enumerate}[leftmargin=2em, itemsep=4pt, topsep=4pt]
+  \item \textbf{B2C freemium consumer app:}
+        Basic triage guidance remains free to maximise social reach. Paid
+        features can include saved symptom history, voice accessibility,
+        advanced source summaries, care-navigation reminders, and family
+        profile management.
+  \item \textbf{B2B2C healthcare API licensing:}
+        Telehealth operators, clinics, hospital intake portals, and insurance
+        triage teams can license BodyCheck as a white-label REST API. Pricing
+        combines a platform fee with per-request usage, following the same
+        linear cost logic defined in the feasibility section.
+  \item \textbf{Education institutional licence:}
+        Universities, medical training programmes, first-aid organisations,
+        and online learning platforms can use BodyCheck as a white-label
+        simulation tool. This channel is priced as an annual licence because
+        value is driven by curriculum usage rather than individual medical
+        sessions.
+\end{enumerate}
+
+The value model differs by channel. For consumers, the value is clarity and
+confidence in the next step. For healthcare partners, the value is a more
+structured pre-consultation intake flow and lower repetitive clarification
+work. For education partners, the value is interactive, repeatable anatomy and
+triage training without exposing real patient data.
+
+% =============================================================================
+\subsection{Impact Measurement Plan}
+\label{sec:impact-measurement}
+% =============================================================================
+
+The post-competition roadmap in \S\ref{sec:feasibility-gtm} becomes stronger
+when paired with measurable impact indicators. BodyCheck will track impact
+through anonymised product and workflow metrics rather than raw symptom logs:
+
+\begin{itemize}[leftmargin=2em, itemsep=3pt, topsep=4pt]
+  \item \textbf{Access:} number of completed triage sessions, active users,
+        returning users, and device/platform distribution.
+  \item \textbf{Clarity:} post-session rating on whether the user understood
+        what to do next.
+  \item \textbf{Safety:} number of red-flag escalations, emergency-care
+        recommendation displays, and disclaimer visibility checks.
+  \item \textbf{Workflow value:} number of generated intake summaries,
+        clinician/partner feedback on summary usefulness, and reduction in
+        repeated clarification questions during pilot workflows.
+  \item \textbf{Education value:} number of completed training cases,
+        instructor feedback, and learner quiz-score improvement before and
+        after using the simulation flow.
+\end{itemize}
+
+These metrics allow the team to demonstrate social benefit without making
+unverifiable medical-outcome claims. The goal for the first 12 months is not
+to prove that BodyCheck replaces clinical care. The goal is to prove that the
+product helps users understand urgency earlier, helps care teams receive
+cleaner symptom context, and helps educators teach anatomical symptom
+recognition in a more interactive way.
+
+% =============================================================================
+% End of Section: Projected Impact Assessment
+% =============================================================================

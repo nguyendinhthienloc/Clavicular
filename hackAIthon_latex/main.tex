@@ -33,7 +33,9 @@
 
 % ---- Misc. ------------------------------------------------------------------
 \usepackage{csquotes}
-\usepackage[style=lncs, backend=biber, natbib=true]{biblatex}
+% Bibliography is not used yet; keep biblatex disabled so the proposal builds
+% on minimal LaTeX installs. Re-enable after adding .bib sources/citations.
+% \usepackage[style=lncs, backend=biber, natbib=true]{biblatex}
 
 % ---- Tables -----------------------------------------------------------------
 \usepackage{booktabs}
@@ -131,6 +133,7 @@
 % ---- Main content -----------------------------------------------------------
 \input{suitability}
 \input{feasibility}
+\input{impact}
 
 % =============================================================================
 \end{document}
