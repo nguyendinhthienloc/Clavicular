@@ -26,34 +26,54 @@ flowchart TD
     %% ── AI Orchestration Tier ────────────────────────────────────────────
     subgraph AI ["🤖  AI Orchestration Tier"]
         FastAPI["FastAPI AI Microservice (Python 3.12)"]
-        Router{"Language Router"}
-        Claude["OpenRouter Claude 3.5 Sonnet"]
-        Qwen["OpenRouter Qwen-2.5-72B"]
-        
+        Router{"Language / Task Router"}
+        Smartbot41["VNPT Smartbot (4.1)\nRule-Based Triage"]
+        Smartbot42["VNPT Smartbot (4.2)\nAdvanced LLM Q&A"]
+
         FastAPI --> Router
-        Router --> |"English"| Claude
-        Router --> |"Vietnamese"| Qwen
+        Router --> |"Deterministic\ntriage"| Smartbot41
+        Router --> |"Open-ended\nreasoning"| Smartbot42
     end
 
-    %% ── External Services ────────────────────────────────────────────────
-    %% Placed structurally inside a clean vertical pipeline
-    subgraph EXT ["☁️  External APIs"]
+    %% ── VNPT API Ecosystem ───────────────────────────────────────────────
+    subgraph EXT ["☁️  VNPT API Ecosystem (Organiser-Provided)"]
         direction LR
-        Exa["Exa.ai Medical Search"]
-        Foursquare["Foursquare Places API"]
-        OpenAI["OpenAI GPT-4.1 Formatter"]
+        subgraph VOICE ["🔊 SmartVoice"]
+            TTS["TTS (3.1)"]
+            STT["STT (3.2)"]
+            CallSum["Call Summary (3.3)"]
+        end
+        subgraph READER ["📄 SmartReader"]
+            OCR["OCR (5.1)"]
+            Extract["Info Extraction (5.2)"]
+        end
+        subgraph SOCIAL ["📡 vnSocial"]
+            Trend["Trending (6.1)"]
+            Sentiment["Sentiment Analysis (6.2)"]
+        end
+        SmartUX["📊 SmartUX Analytics (7.1)"]
+        eKYC["🪪 eKYC OCR (1.1)"]
+        SmartVision["👁️ SmartVision\nFace Detection (8.3)"]
     end
 
     %% ── Cross-Tier Hierarchical Connections ──────────────────────────────
     Flutter --> |"POST /api/ai/diagnose (HTTPS)"| Express
     Validator --> |"Proxy request (internal)"| FastAPI
-    
-    %% Forcing External APIs to sit cleanly under FastAPI structurally
-    FastAPI --> EXT
+
+    %% FastAPI calls into VNPT API Ecosystem
+    FastAPI --> VOICE
+    FastAPI --> READER
+    FastAPI --> SOCIAL
+    FastAPI --> SmartUX
+    Express --> eKYC
+    FastAPI --> SmartVision
 
     %% ── Styling ──────────────────────────────────────────────────────────
-    style CLIENT   fill:#E8F0FE,stroke:#1A73E8,stroke-width:2px
-    style GATEWAY  fill:#E6F4EA,stroke:#0D9276,stroke-width:2px
-    style AI       fill:#FEF7E0,stroke:#F4A21B,stroke-width:2px
-    style EXT      fill:#FCE8E6,stroke:#D93025,stroke-width:2px
-    style Router   fill:#FFFFFF,stroke:#5F6368,stroke-dasharray: 4 4
+    style CLIENT      fill:#E8F0FE,stroke:#1A73E8,stroke-width:2px
+    style GATEWAY     fill:#E6F4EA,stroke:#0D9276,stroke-width:2px
+    style AI          fill:#FEF7E0,stroke:#F4A21B,stroke-width:2px
+    style EXT         fill:#FCE8E6,stroke:#D93025,stroke-width:2px
+    style VOICE       fill:#FFF3E0,stroke:#E65100,stroke-width:1.5px
+    style READER      fill:#E8F5E9,stroke:#2E7D32,stroke-width:1.5px
+    style SOCIAL      fill:#EDE7F6,stroke:#4527A0,stroke-width:1.5px
+    style Router      fill:#FFFFFF,stroke:#5F6368,stroke-dasharray: 4 4
