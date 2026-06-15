@@ -430,7 +430,6 @@ INPUT .\feasibility.tex
 INPUT feasibility.tex
 INPUT C:\Users\Thien Loc\AppData\Local\Programs\MiKTeX\fonts\tfm\public\lm\ts1-lmr7.tfm
 INPUT C:\Users\Thien Loc\AppData\Local\Programs\MiKTeX\fonts\tfm\public\lm\ts1-lmr6.tfm
-INPUT C:\Users\Thien Loc\AppData\Local\Programs\MiKTeX\fonts\tfm\public\lm\ec-lmtt9.tfm
 INPUT C:\Users\Thien Loc\AppData\Local\Programs\MiKTeX\fonts\enc\dvips\lm\lm-mathsy.enc
 INPUT C:\Users\Thien Loc\AppData\Local\Programs\MiKTeX\fonts\enc\dvips\lm\lm-rm.enc
 INPUT C:\Users\Thien Loc\AppData\Local\Programs\MiKTeX\fonts\tfm\public\lm\ec-lmri10.tfm
@@ -493,5 +492,3 @@ INPUT C:\Users\Thien Loc\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmt
 INPUT C:\Users\Thien Loc\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmtt10.pfb
 INPUT C:\Users\Thien Loc\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmtt12.pfb
 INPUT C:\Users\Thien Loc\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmtt12.pfb
-INPUT C:\Users\Thien Loc\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmtt9.pfb
-INPUT C:\Users\Thien Loc\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmtt9.pfb
