@@ -177,32 +177,46 @@ each tier independently testable, replaceable, and deployable:
         bindings for all VNPT client SDKs.
   \item \textbf{VNPT API Ecosystem (Round~2):}
         The organiser provides direct access to eight API families.
-        BodyCheck's planned integration uses:
-        SmartVoice STT (API~3.2) for voice symptom input;
-        SmartVoice TTS (API~3.1) for reading responses back to users
-        with accessibility needs;
-        SmartVoice call-summary (API~3.3) for distilling multi-turn
-        consultation transcripts into a structured summary;
-        Smartbot rule-based triage (API~4.1) for fast, deterministic
-        first-pass classification;
-        Smartbot advanced LLM (API~4.2) for open-ended differential
-        reasoning and follow-up chat;
-        SmartReader OCR and extraction (API~5.1/5.2) for parsing
-        user-uploaded medical documents, lab reports, and prescriptions;
-        SmartUX analytics (API~7.1) for in-app interaction telemetry
-        and friction-point identification;
-        vnSocial trend listening (API~6.1/6.2) for monitoring
-        health-topic sentiment on Vietnamese social media, surfacing
-        epidemic signals and common symptom clusters;
-        eKYC document OCR (API~1.1) for verified account creation in
-        the B2B2C institutional channel; and
-        SmartVision face detection (API~8.3) as an optional
-        telemedicine extension that confirms user presence before a
-        live consultation handoff.
-        Using the full breadth of the organiser-provided API catalogue
-        maximises the integration score in the Round~2 product
-        completion rubric and demonstrates the depth of the team's
-        engagement with the VNPT ecosystem.
+        To deliver a reliable MVP within the 8-day Round~2 build window
+        (26~June -- 3~July~2026), BodyCheck categorises these APIs into
+        two explicit tiers:
+
+        \textbf{Core Integration Targets (Round~2 MVP).}
+        These two families are the minimum set required for the core
+        triage loop and will be fully integrated and tested by the
+        Round~3 submission deadline:
+        \begin{itemize}[leftmargin=3em, itemsep=1pt, topsep=2pt]
+          \item \textbf{SmartVoice STT/TTS (API~3.1/3.2/3.3):}
+                Voice symptom intake (STT), audio response playback for
+                users with accessibility needs (TTS), and multi-turn
+                consultation transcript summarisation (call-summary).
+          \item \textbf{Smartbot (API~4.1/4.2):}
+                Deterministic rule-based first-pass triage classification
+                (API~4.1) and open-ended LLM-backed differential reasoning
+                and follow-up chat (API~4.2).
+        \end{itemize}
+
+        \textbf{Phase~3 / Production Roadmap Extensions.}
+        The following APIs add significant value but will be integrated
+        in the post-competition hardening phase once the core loop is
+        stable:
+        \begin{itemize}[leftmargin=3em, itemsep=1pt, topsep=2pt]
+          \item SmartReader OCR and extraction (API~5.1/5.2) for
+                parsing user-uploaded medical documents and lab reports.
+          \item SmartUX analytics (API~7.1) for in-app interaction
+                telemetry and friction-point identification.
+          \item vnSocial trend listening (API~6.1/6.2) for monitoring
+                health-topic sentiment on Vietnamese social media and
+                surfacing epidemic signals.
+          \item eKYC document OCR (API~1.1) for verified account
+                creation in the B2B2C institutional channel.
+          \item SmartVision face detection (API~8.3) as an optional
+                telemedicine presence-confirmation extension.
+        \end{itemize}
+
+        This phased approach demonstrates realistic Round~2 scoping while
+        confirming the team's commitment to leveraging the full breadth of
+        the VNPT ecosystem in the production build.
 \end{itemize}
 
 Figure~\ref{fig:arch-diagram} shows the complete deployment topology,
@@ -323,6 +337,16 @@ applying defence-in-depth controls at every tier:
         The Express gateway applies JSON Schema middleware before any payload
         reaches the AI tier, blocking prompt-injection and malformed-input
         vectors at the network boundary.
+  \item \textbf{Identity--Health Data Decoupling:}
+        User identity metadata --- managed securely at the Express Gateway
+        tier via JWT --- is strictly decoupled from the stateless AI
+        Orchestration tier. The transient symptom payloads forwarded to
+        FastAPI are completely anonymised before dispatch: all identity
+        claims are stripped at the gateway boundary and replaced with an
+        ephemeral, per-request correlation ID. Payloads are processed
+        request-by-request without session carryover, ensuring that user
+        identity can never be mapped back to health queries in any
+        underlying system, log file, or audit trail.
   \item \textbf{No Persistent PHI:}
         The FastAPI service holds session context only within the lifespan of
         a single HTTP request. Structured logs record only anonymised metadata
@@ -373,12 +397,24 @@ quality management certification.
 \subsection{Post-Competition Roadmap and GTM Strategy}
 \label{sec:feasibility-gtm}
 
-BodyCheck's market scope is intentionally \emph{global from day one}: the
-entire product interface, AI prompt layer, and clinical-reference content
-operate in English, making it accessible to users in most countries without
-a localisation bottleneck. Vietnam serves as the primary launch market given
-the team's local regulatory familiarity and existing network, with South-East
-Asia and broader English-speaking markets as the natural second wave. We plan to eventually include Vietnamese language to the product to be to reach older demographics domestically, but this is a post-MVP feature rather than a launch requirement.
+BodyCheck launches as a \emph{natively bilingual platform --- English and
+Vietnamese from day one}. This is not a post-MVP localisation effort: because
+BodyCheck integrates VNPT's SmartVoice and Smartbot ecosystems, which are
+natively optimised for the Vietnamese language, the platform provides an
+immediate, high-impact localised triage solution for Vietnam's mixed
+urban--rural market while simultaneously maintaining standard English
+capabilities for seamless global scalability. Vietnamese-speaking users ---
+including older demographics and those in rural areas with limited English
+literacy --- can interact through voice (SmartVoice STT/TTS) and receive
+AI-generated guidance (Smartbot) in their native language from the first
+release. English-language users benefit from the same core infrastructure,
+making South-East Asian, South Asian, and international expansion a natural
+next step rather than a separate engineering effort.
+
+Vietnam serves as the primary launch market given the team's local regulatory
+familiarity, existing network, and the strategic depth of the VNPT ecosystem
+integration. This dual-language foundation strengthens BodyCheck's alignment
+with the HackAIthon 2026 organisers and VNPT as domestic technology champion.
 
 Beyond the primary consumer health use case, BodyCheck addresses a material
 problem in \textbf{education}: medical and nursing students, first-aid
@@ -401,26 +437,28 @@ the rubric's 12-month market expansion requirement.
   \item[\textbf{Phase 1 --- HackAIthon Competition}]
     \textit{June -- July 2026 (Rounds 1--3).}\\
     Submit the Round~1 idea proposal. If selected for Round~2
-    (announcement before 26~June), integrate necessary VNPT API services
-  into the BodyCheck stack over the 8-day build window
-    (26~June -- 3~July) with direct Mentor support. Demonstrate a
-    live-running product at the Round~3 finals (14--15~July~2026 in
-    Hanoi). Collect structured judge and mentor feedback to anchor the
-    post-competition product direction.
+    (announcement before 26~June), integrate the Core Integration Targets
+    (SmartVoice STT/TTS and Smartbot) into the BodyCheck stack over the
+    8-day build window (26~June -- 3~July) with direct Mentor support.
+    Demonstrate a live-running bilingual product at the Round~3 finals
+    (14--15~July~2026 in Hanoi). Collect structured judge and mentor
+    feedback to anchor the post-competition product direction.
 
   \item[\textbf{Phase 2 --- Hardening and Closed Beta}]
     \textit{August -- November 2026 (Months 1--4 post-competition).}\\
     Begin serious post-competition development in August once semester
-    schedules allow. Stabilise and document all VNPT API integrations;
-    containerise all services with a one-command
+    schedules allow. Stabilise and document all Round~2 VNPT API
+    integrations; containerise all services with a one-command
     \texttt{docker-compose} setup; implement TLS certificate
-    provisioning and vault-based secret injection.
+    provisioning and vault-based secret injection. Integrate the
+    Phase~3 Roadmap Extension APIs (SmartReader, SmartUX, vnSocial,
+    eKYC, SmartVision) during this hardening window.
     In September--October, run a closed beta with 30--50 volunteer
     testers drawn from HCMUS student and faculty networks and online
     medical communities. Iterate on VNPT Smartbot prompt templates and
     SmartReader parsing pipelines based on real-user feedback. Conduct
     a first-pass clinical language and legal review.
-    Target: a stable, security-hardened beta release by end of
+    Target: a stable, security-hardened bilingual beta release by end of
     November~2026.
 
   \item[\textbf{Phase 3 --- Public Launch and Market Expansion}]
@@ -448,12 +486,14 @@ the rubric's 12-month market expansion requirement.
 BodyCheck targets three complementary GTM channels:
 
 \begin{enumerate}[leftmargin=2em, itemsep=4pt, topsep=4pt]
-  \item \textbf{B2C --- Global Consumer Health App (English-first):}
-        A free-tier PWA and native mobile app distributed worldwide.
-        The English-first UI removes localisation barriers and makes
-        the product immediately accessible across South-East Asia,
-        South Asia, and other regions underserved by AI-powered
-        medical triage tools. Revenue via freemium subscription.
+  \item \textbf{B2C --- Bilingual Consumer Health App (Vietnamese \& English):}
+        A free-tier PWA and native mobile app serving both Vietnamese and
+        English-speaking users from launch. The bilingual interface --- powered
+        by VNPT SmartVoice and Smartbot's native Vietnamese optimisation ---
+        provides an immediate, high-impact triage solution for Vietnam's mixed
+        urban--rural market while remaining accessible across South-East Asia,
+        South Asia, and other regions underserved by AI-powered medical triage
+        tools. Revenue via freemium subscription.
   \item \textbf{B2B2C --- API Licensing to Healthcare Platforms:}
         White-label REST API for telehealth operators, hospital patient
         intake portals, and health insurance triage systems. Priced at
