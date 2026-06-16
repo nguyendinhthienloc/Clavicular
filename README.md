@@ -4,7 +4,21 @@ BodyCheck is a lightweight medical guidance service designed to help users quick
 
 The **1st MVP** of this project was successfully completed during the **LotusHacks 2026 Hackathon**—the largest hackathon in Vietnam.
 
-![BodyCheck App Screenshot](./example.png)
+<p align="center">
+  <img src="./example.png" alt="BodyCheck 3D Symptom Picker" width="600"/>
+</p>
+
+---
+
+## 🎬 Demo Video
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=n5hkWZSG4bc" target="_blank">
+    <img src="https://img.youtube.com/vi/n5hkWZSG4bc/maxresdefault.jpg" alt="Watch the BodyCheck Demo on YouTube" width="600"/>
+  </a>
+  <br/>
+  <em>▶ Click to watch the full demo on YouTube</em>
+</p>
 
 ---
 
