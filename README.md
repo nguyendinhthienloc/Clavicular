@@ -4,6 +4,8 @@ BodyCheck is a lightweight medical guidance service designed to help users quick
 
 The **1st MVP** of this project was successfully completed during the **LotusHacks 2026 Hackathon**—the largest hackathon in Vietnam.
 
+![BodyCheck App Screenshot](./example.png)
+
 ---
 
 ## Key Features
@@ -28,17 +30,17 @@ The **1st MVP** of this project was successfully completed during the **LotusHac
 ```mermaid
 graph TD
     User([User Client]) -->|Interact| Flutter[Flutter Web/Mobile Client]
-    subgraph Frontend Subsystem
+    subgraph "Frontend Subsystem"
         Flutter -->|IFrame Message| ThreeJS[Three.js 3D Model Picker]
     end
     Flutter -->|HTTP REST| Gateway[Express API Gateway Node.js]
-    subgraph Backend Subsystem
+    subgraph "Backend Subsystem"
         Gateway -->|JSON Schema Validation| Router[Routes/Controllers]
     end
     Router -->|Proxy Request| FastAPI[FastAPI AI Microservice Python]
-    subgraph AI Orchestrator
-        FastAPI -->|Orchestrate| Providers{API Clients}
-        Providers -->|STT (Server-only)| Whisper[OpenAI Whisper]
+    subgraph "AI Orchestrator"
+        FastAPI -->|Orchestrate| Providers{APIClients}
+        Providers -->|STT Server-only| Whisper[OpenAI Whisper]
         Providers -->|Medical Reference| Exa[Exa.ai API]
         Providers -->|Diagnosis Reasoning| OpenRouter[OpenRouter API]
         Providers -->|Geo-Routing| Foursquare[Foursquare Places API]
@@ -50,21 +52,21 @@ graph TD
 ```mermaid
 sequenceDiagram
     actor User as Patient/User
-    participant Flutter as Flutter Frontend (Client)
+    participant Flutter as Flutter Frontend
     participant Gateway as Node.js Express Gateway
     participant FastAPI as FastAPI AI Microservice
-    participant LLM as OpenRouter (Claude/Qwen)
+    participant LLM as OpenRouter Claude/Qwen
     participant Exa as Exa.ai Search
 
-    User->>Flutter: Interact with 3D Model & Describe Symptoms
+    User->>Flutter: Interact with 3D Model and Describe Symptoms
     Flutter->>Gateway: POST /api/ai/diagnose
     Gateway->>FastAPI: POST /api/diagnose
     FastAPI->>LLM: call_diagnosis()
     LLM-->>FastAPI: Structured JSON Diagnosis
-    FastAPI-->>Gateway: ServiceResponse (JSON Diagnosis)
-    Gateway->>Gateway: Format clinician text (OpenAI gpt-5.4)
-    Gateway-->>Flutter: Clinician narrative + JSON data
-    Flutter->>User: Display Diagnosis & Show Nearby Clinics Map
+    FastAPI-->>Gateway: ServiceResponse JSON Diagnosis
+    Gateway->>Gateway: Format clinician text via OpenAI
+    Gateway-->>Flutter: Clinician narrative and JSON data
+    Flutter->>User: Display Diagnosis and Show Nearby Clinics Map
 ```
 
 ---
